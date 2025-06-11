@@ -230,6 +230,7 @@
 // }
 
 
+import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/service_functions/cartservicecard.dart';
@@ -244,20 +245,52 @@ class CartPage extends StatefulWidget {
 class _CartPageState extends State<CartPage> {
   bool isExpanded = false;
 
+  double totalprice = 0;
+  double totaloriginalprice = 0;
+  int servicecount = 0;
+
+  @override
+  void initState() {
+    super.initState();
+    calculateCartSummary();
+  }
+
+Future<void> calculateCartSummary() async {
+  final snapshot = await FirebaseFirestore.instance.collection('cart').get();
+  double price = 0;
+  double originalprice = 0;
+
+  for (var doc in snapshot.docs) {
+    final data = doc.data();
+    final double p = double.tryParse(data["price"].toString()) ?? 0;
+    final double op = double.tryParse(data['original_price'].toString()) ?? 0;
+    price += p;
+    originalprice += op;
+  }
+
+  if (!mounted) return; // ✅ Safeguard against setState after dispose
+
+  setState(() {
+    totalprice = price;
+    totaloriginalprice = originalprice;
+    servicecount = snapshot.docs.length;
+  });
+}
+
+
   @override
   Widget build(BuildContext context) {
     double panelHeight = isExpanded ? 270 : 0;
+    double discount = totaloriginalprice - totalprice;
 
     return Scaffold(
       backgroundColor: const Color.fromRGBO(246, 246, 246, 1),
       body: Stack(
         children: [
-          // Main content scrollable area
           SingleChildScrollView(
-            padding: EdgeInsets.only(bottom: 280), 
+            padding: const EdgeInsets.only(bottom: 280),
             child: Column(
               children: [
-                // Top AppBar Style Container
                 Container(
                   height: 80,
                   width: double.infinity,
@@ -287,14 +320,10 @@ class _CartPageState extends State<CartPage> {
                   ),
                 ),
                 const SizedBox(height: 10),
-
-                // Cart Items
                 Cartservicecard(),
               ],
             ),
           ),
-
-          // Floating expandable price details panel
           Padding(
             padding: const EdgeInsets.all(8.0),
             child: Align(
@@ -323,13 +352,13 @@ class _CartPageState extends State<CartPage> {
                   ),
                   child: isExpanded
                       ? Padding(
-                        padding: const EdgeInsets.all(8.0),
-                        child: Column(
+                          padding: const EdgeInsets.all(8.0),
+                          child: Column(
                             crossAxisAlignment: CrossAxisAlignment.start,
                             children: [
-                              SizedBox(height: 5,),
-                              Center(
-                                child: const Text(
+                              const SizedBox(height: 5),
+                              const Center(
+                                child: Text(
                                   "Price Details",
                                   style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                 ),
@@ -337,17 +366,17 @@ class _CartPageState extends State<CartPage> {
                               const SizedBox(height: 10),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: const [
-                                  Text("Price (2 Bookings)", style: TextStyle(fontSize: 15)),
-                                  Text("₹1,799", style: TextStyle(fontSize: 15)),
+                                children: [
+                                  Text("Price ($servicecount Bookings)", style: const TextStyle(fontSize: 15)),
+                                  Text("₹${totaloriginalprice.toStringAsFixed(0)}", style: const TextStyle(fontSize: 15)),
                                 ],
                               ),
                               const SizedBox(height: 5),
                               Row(
                                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                children: const [
-                                  Text("Discount", style: TextStyle(fontSize: 15)),
-                                  Text("-₹399", style: TextStyle(fontSize: 15, color: gradientgreen2.c)),
+                                children: [
+                                  const Text("Discount", style: TextStyle(fontSize: 15)),
+                                  Text("-₹${discount.toStringAsFixed(0)}", style: TextStyle(fontSize: 15, color: gradientgreen2.c)),
                                 ],
                               ),
                               const SizedBox(height: 8),
@@ -360,17 +389,18 @@ class _CartPageState extends State<CartPage> {
                                   ),
                                   Column(
                                     crossAxisAlignment: CrossAxisAlignment.end,
-                                    children: const [
-                                      Text(
-                                        "₹1,799",
-                                        style: TextStyle(
-                                          decoration: TextDecoration.lineThrough,
-                                          color: Colors.grey,
+                                    children: [
+                                      if (discount > 0)
+                                        Text(
+                                          "₹${totaloriginalprice.toStringAsFixed(0)}",
+                                          style: const TextStyle(
+                                            decoration: TextDecoration.lineThrough,
+                                            color: Colors.grey,
+                                          ),
                                         ),
-                                      ),
                                       Text(
-                                        "₹1,400",
-                                        style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                                        "₹${totalprice.toStringAsFixed(0)}",
+                                        style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                                       ),
                                     ],
                                   ),
@@ -389,7 +419,6 @@ class _CartPageState extends State<CartPage> {
                                       backgroundColor: gradientgreen2.c,
                                     ),
                                     onPressed: () {
-                                      // Handle booking action
                                       ScaffoldMessenger.of(context).showSnackBar(
                                         const SnackBar(content: Text('Booking Confirmed!')),
                                       );
@@ -400,18 +429,14 @@ class _CartPageState extends State<CartPage> {
                               ),
                             ],
                           ),
-                      )
-                      : const Center(
-                          
-                        ),
+                        )
+                      : const SizedBox(),
                 ),
               ),
             ),
           ),
         ],
       ),
-
-      // Floating Expand Button
       floatingActionButton: Padding(
         padding: const EdgeInsets.only(bottom: 80),
         child: FloatingActionButton.small(
@@ -419,6 +444,9 @@ class _CartPageState extends State<CartPage> {
           onPressed: () {
             setState(() {
               isExpanded = !isExpanded;
+              if (isExpanded) {
+                calculateCartSummary();
+              }
             });
           },
           child: Icon(

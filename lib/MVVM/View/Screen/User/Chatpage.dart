@@ -40,7 +40,7 @@ class _ChatPageState extends State<ChatPage> {
       List<dynamic>? options;
 
       if (message.toLowerCase() == "hi") {
-        response = "Hi Sadiq! Welcome to the SwiftClean Help Center.";
+        response = "Hi  Welcome to the SwiftClean Help Center.";
         response = "How can I help you today?";
         options = ["My Bookings", "Cancel Booking", "Payment", "Something Else"];
       } else if (message == "My Bookings") {

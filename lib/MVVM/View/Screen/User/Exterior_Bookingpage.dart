@@ -1,6 +1,12 @@
+import 'dart:convert';
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/Cartpage.dart';
+import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
@@ -15,6 +21,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
   double _currentSliderValue = 1000;
   DateTime selectedDate = DateTime.now();
   int selectedIndex = 0;
+  double realPrice = 0.0;
 
   int hour = 8;
   int minute = 30;
@@ -27,8 +34,18 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
 
   String _getMonthName(int month) {
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return monthNames[month - 1];
   }
@@ -104,8 +121,8 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
           children: [
             Column(
               children: [
-               
-                Image.asset("assets/image/garden_size_large.png", width: double.infinity),
+                Image.asset("assets/image/garden_size_large.png",
+                    width: double.infinity),
                 // Bottom Booking Panel
                 Container(
                   width: 440,
@@ -114,12 +131,14 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                   ),
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0, vertical: 30),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text("Garden Size",
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w500)),
                           Slider(
                             activeColor: gradientgreen2.c,
                             value: _currentSliderValue,
@@ -137,11 +156,14 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text("Select Date",
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500)),
                               TextButton(
                                 onPressed: () {},
                                 child: Text("Custom Date",
-                                    style: TextStyle(fontSize: 14, color: gradientgreen2.c)),
+                                    style: TextStyle(
+                                        fontSize: 14, color: gradientgreen2.c)),
                               ),
                             ],
                           ),
@@ -163,21 +185,26 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                   },
                                   child: Container(
                                     margin: EdgeInsets.symmetric(horizontal: 4),
-                                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 18, vertical: 14),
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? gradientgreen2.c
-                                          : const Color.fromRGBO(229, 229, 229, 1),
+                                          : const Color.fromRGBO(
+                                              229, 229, 229, 1),
                                       borderRadius: BorderRadius.circular(30),
                                     ),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           DateFormat.E().format(date),
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                         SizedBox(height: 5),
@@ -185,7 +212,9 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                           '${date.day}',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                         SizedBox(height: 5),
@@ -193,7 +222,9 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                           monthName,
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                       ],
@@ -205,7 +236,8 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                           ),
                           const SizedBox(height: 20),
                           Text("Select Time",
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 10),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -217,7 +249,8 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.add, color: gradientgreen2.c),
+                                      icon: Icon(Icons.add,
+                                          color: gradientgreen2.c),
                                       onPressed: incrementHour,
                                     ),
                                   ),
@@ -226,15 +259,19 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
-                                          BoxShadow(color: Colors.grey.shade300, blurRadius: 4)
+                                          BoxShadow(
+                                              color: Colors.grey.shade300,
+                                              blurRadius: 4)
                                         ],
                                       ),
-                                      child: Text(hour.toString().padLeft(2, '0'),
+                                      child: Text(
+                                          hour.toString().padLeft(2, '0'),
                                           style: TextStyle(fontSize: 18)),
                                     ),
                                   ),
@@ -243,7 +280,8 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.remove, color: gradientgreen2.c),
+                                      icon: Icon(Icons.remove,
+                                          color: gradientgreen2.c),
                                       onPressed: decrementHour,
                                     ),
                                   ),
@@ -259,7 +297,8 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.add, color: gradientgreen2.c),
+                                      icon: Icon(Icons.add,
+                                          color: gradientgreen2.c),
                                       onPressed: incrementMinute,
                                     ),
                                   ),
@@ -268,15 +307,19 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
-                                          BoxShadow(color: Colors.grey.shade300, blurRadius: 4)
+                                          BoxShadow(
+                                              color: Colors.grey.shade300,
+                                              blurRadius: 4)
                                         ],
                                       ),
-                                      child: Text(minute.toString().padLeft(2, '0'),
+                                      child: Text(
+                                          minute.toString().padLeft(2, '0'),
                                           style: TextStyle(fontSize: 18)),
                                     ),
                                   ),
@@ -285,7 +328,8 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.remove, color: gradientgreen2.c),
+                                      icon: Icon(Icons.remove,
+                                          color: gradientgreen2.c),
                                       onPressed: decrementMinute,
                                     ),
                                   ),
@@ -296,9 +340,11 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                 style: TextButton.styleFrom(
                                   backgroundColor: meridiem == 'AM'
                                       ? gradientgreen2.c
-                                      : const Color.fromARGB(255, 231, 231, 231),
-                                  foregroundColor:
-                                      meridiem == 'AM' ? Colors.white : Colors.black,
+                                      : const Color.fromARGB(
+                                          255, 231, 231, 231),
+                                  foregroundColor: meridiem == 'AM'
+                                      ? Colors.white
+                                      : Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -312,9 +358,11 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                                 style: TextButton.styleFrom(
                                   backgroundColor: meridiem == 'PM'
                                       ? gradientgreen2.c
-                                      : const Color.fromARGB(255, 231, 231, 231),
-                                  foregroundColor:
-                                      meridiem == 'PM' ? Colors.white : Colors.black,
+                                      : const Color.fromARGB(
+                                          255, 231, 231, 231),
+                                  foregroundColor: meridiem == 'PM'
+                                      ? Colors.white
+                                      : Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -325,90 +373,103 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                               ),
                             ],
                           ),
-                          SizedBox(height: 100,)
+                          SizedBox(
+                            height: 100,
+                          )
                         ],
                       ),
                     ),
                   ),
                 ),
-            
+
                 // Price Footer
-                
               ],
             ),
-              Positioned(
-                      top: 10,
-                      left: 15,
-                      child: SafeArea(
-                        child: customBackbutton1(
-                          onpress: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ),
-                    ),
+            Positioned(
+              top: 10,
+              left: 15,
+              child: SafeArea(
+                child: customBackbutton1(
+                  onpress: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 330,
+              left: 320,
+              child: IconButton(
+                  onPressed: () async {
+                   
+                      final uid = FirebaseAuth.instance.currentUser!.uid;
 
-                    Positioned(
-                      top: 330,
-                      left: 320,
-                      child: IconButton(
-                       onPressed: (){
-      
-                       },
-                        icon:Icon(Icons.add_shopping_cart_outlined)),
-                    ),
+                     await FirebaseFirestore.instance.collection('carts').doc(uid).set({
+                      'garden_size':_currentSliderValue,
+                      'price': '200',
+                      'quantity': 1,
+                      'product_name': '',
+                      'product_image': 'https://i.imgur.com/8QfQ9eB.jpg',
+                      'product_id': '1',
+                      'product_type': 'Exterior',
+                     });
+
+                      
+                  },
+                  icon: Icon(Icons.add_shopping_cart_outlined)),
+            ),
           ],
         ),
       ),
       floatingActionButton: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Row(
+          children: [
+            Image.asset("assets/icons/dollar.png", scale: 2),
+            SizedBox(width: 10),
+            Text("$realPrice",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold)),
+            Text("/hour",
+                style: TextStyle(
+                    color: const Color.fromRGBO(133, 130, 130, 1),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            Spacer(),
+            SizedBox(
+              height: 57,
+              width: 160,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: gradientgreen2.c,
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    backgroundColor: Colors.white,
+                    content: Text(
+                      "Selected: $formattedDate at $formattedTime",
+                      style: TextStyle(color: Colors.black),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    child: Row(
-                      children: [
-                        Image.asset("assets/icons/dollar.png", scale: 2),
-                        SizedBox(width: 10),
-                        Text("Price",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold)),
-                        Text("/Day",
-                            style: TextStyle(
-                                color: const Color.fromRGBO(133, 130, 130, 1),
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold)),
-                        Spacer(),
-                        SizedBox(
-                          height: 57,
-                          width: 160,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: gradientgreen2.c,
-                            ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                backgroundColor: Colors.white,
-                                content: Text(
-                                  "Selected: $formattedDate at $formattedTime",
-                                  style: TextStyle(color: Colors.black),
-                                ),
-                              ));
-                            },
-                            child: Text("Book Now",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.white)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+                  ));
+                },
+                child: Text("Book Now",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }

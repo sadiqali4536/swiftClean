@@ -2,9 +2,11 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/cupertino.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
 import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/changepassword.dart';
 import 'package:swiftclean_project/MVVM/View/Screen/User/edit_profile.dart';
+import 'package:swiftclean_project/MVVM/Viewmodel/themes_bloc.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/containner/custom_image_banner2.dart';
@@ -33,33 +35,38 @@ class _ProfilePageState extends State<ProfilePage> {
   bool _isNotificationOn = true;
 
   Future<void> _deleteAccount() async {
-  try {
-    final user = FirebaseAuth.instance.currentUser;
+    try {
+      final user = FirebaseAuth.instance.currentUser;
 
-    if (user != null) {
-      final userpass = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
-      final cred = EmailAuthProvider.credential(
-        email: user.email!,
-        password: userpass['password'],
-      );
+      if (user != null) {
+        final userpass = await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .get();
+        final cred = EmailAuthProvider.credential(
+          email: user.email!,
+          password: userpass['password'],
+        );
 
-      await user.reauthenticateWithCredential(cred);
-      await FirebaseFirestore.instance.collection('users').doc(user.uid).delete();
-      await user.delete();
+        await user.reauthenticateWithCredential(cred);
+        await FirebaseFirestore.instance
+            .collection('users')
+            .doc(user.uid)
+            .delete();
+        await user.delete();
 
-      Navigator.pushAndRemoveUntil(
-        context,
-        MaterialPageRoute(builder: (context) => LoginAndSigning()),
-        (route) => false,
+        Navigator.pushAndRemoveUntil(
+          context,
+          MaterialPageRoute(builder: (context) => LoginAndSigning()),
+          (route) => false,
+        );
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error deleting account: ${e.toString()}')),
       );
     }
-  } catch (e) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(content: Text('Error deleting account: ${e.toString()}')),
-    );
   }
-}
-
 
   @override
   Widget build(BuildContext context) {
@@ -171,12 +178,14 @@ class _ProfilePageState extends State<ProfilePage> {
                                 const Spacer(),
                                 Padding(
                                   padding: const EdgeInsets.only(right: 10),
-                                  child: CupertinoSwitch(
-                                    value: _isDarkMode,
-                                    onChanged: (bool value) {
-                                      setState(() {
-                                        _isDarkMode = value;
-                                      });
+                                  child: BlocBuilder<ThemeBloc, ThemeState>(
+                                    builder: (context, state) {
+                                      return CupertinoSwitch(
+                                        value: state.themeMode == ThemeMode.dark,
+                                        onChanged: (_) {
+                                          context.read<ThemeBloc>().add(ToggleThemeEvent());
+                                        },
+                                      );
                                     },
                                   ),
                                 ),

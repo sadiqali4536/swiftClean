@@ -48,6 +48,7 @@ class _ServicesListState extends State<ServicesList> {
             const SizedBox(height: 10),
             Expanded(
               child: Servicecard2(
+                category: categoryList[selectedCategoryIndex]
                
               ),
             ),
