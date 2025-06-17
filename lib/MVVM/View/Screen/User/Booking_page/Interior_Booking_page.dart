@@ -1,10 +1,12 @@
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
 class InteriorBookingPage extends StatefulWidget {
-  const InteriorBookingPage({super.key});
+   final String ?serviceId;
+  const InteriorBookingPage({super.key, this.serviceId});
 
   @override
   State<InteriorBookingPage> createState() => _InteriorBookingPageState();
@@ -329,9 +331,13 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                       top: 290,
                       left: 320,
                       child: IconButton(
-                       onPressed: (){
-      
-                       },
+                   onPressed: () async {
+                          
+
+                          ScaffoldMessenger.of(context).showSnackBar(
+                         const SnackBar(content: Text('Added to cart')),
+                        );
+                     },
                         icon:Icon(Icons.add_shopping_cart_outlined)),
                     ),
           ],

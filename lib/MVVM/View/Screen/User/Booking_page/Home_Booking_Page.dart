@@ -1,37 +1,55 @@
-import 'dart:convert';
-
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Cartpage.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
-class ExteriorBookingpage extends StatefulWidget {
-  ExteriorBookingpage({super.key});
+class HomeBookingPage extends StatefulWidget {
+  final String? serviceId;
+  String? serviceName;
+  String? image;
+  String? originalPrice;
+  String? discountPrice;
+  String? discount;
+  int? rating;
+  String? category;
+  String? serviceType;
+  HomeBookingPage({
+    super.key,
+    this.serviceId,
+    this.serviceName,
+    this.image,
+    this.originalPrice,
+    this.discountPrice,
+    this.discount,
+    this.rating,
+    this.category,
+    this.serviceType,
+  });
 
   @override
-  State<ExteriorBookingpage> createState() => _ExteriorBookingpageState();
+  State<HomeBookingPage> createState() => _HomeBookingPageState();
 }
 
-class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
+class _HomeBookingPageState extends State<HomeBookingPage> {
   double _currentSliderValue = 1000;
   DateTime selectedDate = DateTime.now();
   int selectedIndex = 0;
-  double realPrice = 0.0;
 
-  int hour = 8;
-  int minute = 30;
+  int hour = DateTime.now().hour % 12;
+  int minute = DateTime.now().minute;
   String meridiem = 'AM';
 
+  /// Get next 30 dates
   List<DateTime> getWeekDates() {
     final today = DateTime.now();
     return List.generate(30, (index) => today.add(Duration(days: index)));
   }
 
+  /// Convert numeric month to name
   String _getMonthName(int month) {
     const monthNames = [
       'January',
@@ -50,6 +68,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
     return monthNames[month - 1];
   }
 
+  /// Time controls
   void incrementHour() {
     setState(() {
       if (hour == 11) {
@@ -102,6 +121,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
     });
   }
 
+  /// Format date/time for display
   String get formattedDate {
     final date = selectedDate;
     return '${DateFormat.E().format(date)}, ${DateFormat.MMMd().format(date)}';
@@ -121,7 +141,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
           children: [
             Column(
               children: [
-                Image.asset("assets/image/garden_size_large.png",
+                Image.asset("assets/image/home_cleaning.png",
                     width: double.infinity),
                 // Bottom Booking Panel
                 Container(
@@ -136,7 +156,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Garden Size",
+                          Text("Home Size",
                               style: TextStyle(
                                   fontSize: 20, fontWeight: FontWeight.w500)),
                           Slider(
@@ -374,7 +394,7 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
                             ],
                           ),
                           SizedBox(
-                            height: 100,
+                            height: 110,
                           )
                         ],
                       ),
@@ -401,20 +421,21 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
               left: 320,
               child: IconButton(
                   onPressed: () async {
-                   
-                      final uid = FirebaseAuth.instance.currentUser!.uid;
+                    await CartService.addToCart(
+                      context: context, // Pass the current context
+                      serviceName: widget.serviceName,
+                      image: widget.image,
+                      originalPrice: widget.originalPrice,
+                      discountPrice: widget.discountPrice,
+                      discount: widget.discount,
+                      rating: widget.rating,
+                      category: widget.category,
+                      serviceType: widget.serviceType,
+                    );
 
-                     await FirebaseFirestore.instance.collection('carts').doc(uid).set({
-                      'garden_size':_currentSliderValue,
-                      'price': '200',
-                      'quantity': 1,
-                      'product_name': '',
-                      'product_image': 'https://i.imgur.com/8QfQ9eB.jpg',
-                      'product_id': '1',
-                      'product_type': 'Exterior',
-                     });
-
-                      
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text('Added to cart')),
+                    );
                   },
                   icon: Icon(Icons.add_shopping_cart_outlined)),
             ),
@@ -432,12 +453,12 @@ class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
           children: [
             Image.asset("assets/icons/dollar.png", scale: 2),
             SizedBox(width: 10),
-            Text("$realPrice",
+            Text("Price",
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 30,
                     fontWeight: FontWeight.bold)),
-            Text("/hour",
+            Text("/Day",
                 style: TextStyle(
                     color: const Color.fromRGBO(133, 130, 130, 1),
                     fontSize: 20,

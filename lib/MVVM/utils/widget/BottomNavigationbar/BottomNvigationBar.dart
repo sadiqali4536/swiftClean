@@ -124,11 +124,11 @@
 import 'dart:developer';
 import 'package:animated_notch_bottom_bar/animated_notch_bottom_bar/animated_notch_bottom_bar.dart';
 import 'package:flutter/material.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Cartpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Chatpage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Homepage.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/Services_list.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/User/profile.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/Cartpage.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/chat/Chatpage.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Home/Homepage.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/services/Services_list.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/profile/profile.dart';
 
 class Bottomnvigationbar extends StatefulWidget {
   const Bottomnvigationbar({super.key});

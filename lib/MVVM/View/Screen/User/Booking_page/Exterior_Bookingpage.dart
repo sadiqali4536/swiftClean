@@ -1,40 +1,93 @@
+import 'dart:convert'; // Not strictly needed for this corrected code, but kept as it was in original.
+
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:cloud_firestore/cloud_firestore.dart' as cartItemsCollectionRef;
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+// These imports are likely not needed for ExteriorBookingpage itself, but good to keep if they are part of the overall navigation.
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Home_Booking_Page.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/Interior_Booking_page.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/pet_Bookingpage.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/vehicle_booking_page.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/Cartpage.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
+import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
 
-class HomeBookingPage extends StatefulWidget {
-  const HomeBookingPage({super.key});
+class ExteriorBookingpage extends StatefulWidget {
+  String? serviceName;
+  String? image;
+  String? originalPrice;
+  String? discountPrice;
+  String? discount;
+  int? rating;
+  String? category;
+  String? serviceType;
+  ExteriorBookingpage({
+    super.key,
+    this.serviceName,
+    this.image,
+    this.originalPrice,
+    this.discountPrice,
+    this.discount,
+    this.rating,
+    this.category,
+    this.serviceType,
+  });
 
   @override
-  State<HomeBookingPage> createState() => _HomeBookingPageState();
+  State<ExteriorBookingpage> createState() => _ExteriorBookingpageState();
 }
 
-class _HomeBookingPageState extends State<HomeBookingPage> {
-  double _currentSliderValue =1000;
- DateTime selectedDate = DateTime.now();
+class _ExteriorBookingpageState extends State<ExteriorBookingpage> {
+  double _currentSliderValue = 1000;
+  DateTime selectedDate = DateTime.now();
   int selectedIndex = 0;
+  double realPrice = 0.0; // This will be updated in initState
 
-   int hour = DateTime.now().hour %12;
-  int minute = DateTime.now().minute;
+  int hour = 8;
+  int minute = 30;
   String meridiem = 'AM';
 
-  /// Get next 30 dates
+  @override
+  void initState() {
+    super.initState();
+    // Initialize realPrice from discountPrice if available, otherwise from originalPrice
+    if (widget.discountPrice != null &&
+        double.tryParse(widget.discountPrice!) != null) {
+      realPrice = double.parse(widget.discountPrice!);
+    } else if (widget.originalPrice != null &&
+        double.tryParse(widget.originalPrice!) != null) {
+      realPrice = double.parse(widget.originalPrice!);
+    }
+  }
+
   List<DateTime> getWeekDates() {
     final today = DateTime.now();
     return List.generate(30, (index) => today.add(Duration(days: index)));
   }
 
-  /// Convert numeric month to name
   String _getMonthName(int month) {
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return monthNames[month - 1];
   }
 
-  /// Time controls
   void incrementHour() {
     setState(() {
       if (hour == 11) {
@@ -87,7 +140,6 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
     });
   }
 
-  /// Format date/time for display
   String get formattedDate {
     final date = selectedDate;
     return '${DateFormat.E().format(date)}, ${DateFormat.MMMd().format(date)}';
@@ -105,11 +157,10 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
       body: SingleChildScrollView(
         child: Stack(
           children: [
-               
             Column(
               children: [
-               
-                Image.asset("assets/image/home_cleaning.png", width: double.infinity),
+                Image.asset("assets/image/garden_size_large.png",
+                    width: double.infinity),
                 // Bottom Booking Panel
                 Container(
                   width: 440,
@@ -118,12 +169,14 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                   ),
                   child: SingleChildScrollView(
                     child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 20.0, vertical: 30),
+                      padding: const EdgeInsets.symmetric(
+                          horizontal: 20.0, vertical: 30),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
-                          Text("Home Size",
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                          Text("Garden Size",
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w500)),
                           Slider(
                             activeColor: gradientgreen2.c,
                             value: _currentSliderValue,
@@ -141,11 +194,44 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               Text("Select Date",
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                                  style: TextStyle(
+                                      fontSize: 20,
+                                      fontWeight: FontWeight.w500)),
                               TextButton(
-                                onPressed: () {},
+                                onPressed: () async {
+                                  // Implement a date picker here for "Custom Date"
+                                  final DateTime? pickedDate =
+                                      await showDatePicker(
+                                    context: context,
+                                    initialDate: selectedDate,
+                                    firstDate: DateTime.now(),
+                                    lastDate: DateTime.now().add(const Duration(
+                                        days: 365)), // One year from now
+                                  );
+                                  if (pickedDate != null &&
+                                      pickedDate != selectedDate) {
+                                    setState(() {
+                                      selectedDate = pickedDate;
+                                      // Find the index of the picked date in weekDates to update selectedIndex
+                                      final index = weekDates.indexWhere(
+                                          (date) =>
+                                              date.year == pickedDate.year &&
+                                              date.month == pickedDate.month &&
+                                              date.day == pickedDate.day);
+                                      if (index != -1) {
+                                        selectedIndex = index;
+                                      } else {
+                                        // If the date is outside the initial 30 days, we just set selectedDate
+                                        // and keep selectedIndex as is or handle it as needed.
+                                        // For simplicity, we might just update the date without changing selectedIndex.
+                                        // A more robust solution might rebuild the weekDates list to include the selected date.
+                                      }
+                                    });
+                                  }
+                                },
                                 child: Text("Custom Date",
-                                    style: TextStyle(fontSize: 14, color: gradientgreen2.c)),
+                                    style: TextStyle(
+                                        fontSize: 14, color: gradientgreen2.c)),
                               ),
                             ],
                           ),
@@ -167,21 +253,26 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                   },
                                   child: Container(
                                     margin: EdgeInsets.symmetric(horizontal: 4),
-                                    padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                    padding: EdgeInsets.symmetric(
+                                        horizontal: 18, vertical: 14),
                                     decoration: BoxDecoration(
                                       color: isSelected
                                           ? gradientgreen2.c
-                                          : const Color.fromRGBO(229, 229, 229, 1),
+                                          : const Color.fromRGBO(
+                                              229, 229, 229, 1),
                                       borderRadius: BorderRadius.circular(30),
                                     ),
                                     child: Column(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       children: [
                                         Text(
                                           DateFormat.E().format(date),
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                         SizedBox(height: 5),
@@ -189,7 +280,9 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                           '${date.day}',
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                         SizedBox(height: 5),
@@ -197,7 +290,9 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                           monthName,
                                           style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                           ),
                                         ),
                                       ],
@@ -209,7 +304,8 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                           ),
                           const SizedBox(height: 20),
                           Text("Select Time",
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w500)),
                           const SizedBox(height: 10),
                           Row(
                             mainAxisAlignment: MainAxisAlignment.center,
@@ -221,7 +317,8 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.add, color: gradientgreen2.c),
+                                      icon: Icon(Icons.add,
+                                          color: gradientgreen2.c),
                                       onPressed: incrementHour,
                                     ),
                                   ),
@@ -230,15 +327,19 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
-                                          BoxShadow(color: Colors.grey.shade300, blurRadius: 4)
+                                          BoxShadow(
+                                              color: Colors.grey.shade300,
+                                              blurRadius: 4)
                                         ],
                                       ),
-                                      child: Text(hour.toString().padLeft(2, '0'),
+                                      child: Text(
+                                          hour.toString().padLeft(2, '0'),
                                           style: TextStyle(fontSize: 18)),
                                     ),
                                   ),
@@ -247,7 +348,8 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.remove, color: gradientgreen2.c),
+                                      icon: Icon(Icons.remove,
+                                          color: gradientgreen2.c),
                                       onPressed: decrementHour,
                                     ),
                                   ),
@@ -263,7 +365,8 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.add, color: gradientgreen2.c),
+                                      icon: Icon(Icons.add,
+                                          color: gradientgreen2.c),
                                       onPressed: incrementMinute,
                                     ),
                                   ),
@@ -272,15 +375,19 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(12),
                                     child: Container(
-                                      padding: EdgeInsets.symmetric(horizontal: 14, vertical: 10),
+                                      padding: EdgeInsets.symmetric(
+                                          horizontal: 14, vertical: 10),
                                       decoration: BoxDecoration(
                                         color: Colors.white,
                                         borderRadius: BorderRadius.circular(12),
                                         boxShadow: [
-                                          BoxShadow(color: Colors.grey.shade300, blurRadius: 4)
+                                          BoxShadow(
+                                              color: Colors.grey.shade300,
+                                              blurRadius: 4)
                                         ],
                                       ),
-                                      child: Text(minute.toString().padLeft(2, '0'),
+                                      child: Text(
+                                          minute.toString().padLeft(2, '0'),
                                           style: TextStyle(fontSize: 18)),
                                     ),
                                   ),
@@ -289,7 +396,8 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                     elevation: 6,
                                     borderRadius: BorderRadius.circular(30),
                                     child: IconButton(
-                                      icon: Icon(Icons.remove, color: gradientgreen2.c),
+                                      icon: Icon(Icons.remove,
+                                          color: gradientgreen2.c),
                                       onPressed: decrementMinute,
                                     ),
                                   ),
@@ -300,9 +408,11 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                 style: TextButton.styleFrom(
                                   backgroundColor: meridiem == 'AM'
                                       ? gradientgreen2.c
-                                      : const Color.fromARGB(255, 231, 231, 231),
-                                  foregroundColor:
-                                      meridiem == 'AM' ? Colors.white : Colors.black,
+                                      : const Color.fromARGB(
+                                          255, 231, 231, 231),
+                                  foregroundColor: meridiem == 'AM'
+                                      ? Colors.white
+                                      : Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -316,9 +426,11 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                                 style: TextButton.styleFrom(
                                   backgroundColor: meridiem == 'PM'
                                       ? gradientgreen2.c
-                                      : const Color.fromARGB(255, 231, 231, 231),
-                                  foregroundColor:
-                                      meridiem == 'PM' ? Colors.white : Colors.black,
+                                      : const Color.fromARGB(
+                                          255, 231, 231, 231),
+                                  foregroundColor: meridiem == 'PM'
+                                      ? Colors.white
+                                      : Colors.black,
                                   shape: RoundedRectangleBorder(
                                     borderRadius: BorderRadius.circular(12),
                                   ),
@@ -329,89 +441,103 @@ class _HomeBookingPageState extends State<HomeBookingPage> {
                               ),
                             ],
                           ),
-                          SizedBox(height: 110,)
+                          SizedBox(
+                            height: 100,
+                          )
                         ],
                       ),
                     ),
                   ),
                 ),
-            
+
                 // Price Footer
-                
               ],
             ),
-              Positioned(
-                      top: 10,
-                      left: 15,
-                      child: SafeArea(
-                        child: customBackbutton1(
-                          onpress: () {
-                            Navigator.pop(context);
-                          },
-                        ),
-                      ),
-                    ),
-                     Positioned(
-                      top: 330,
-                      left: 320,
-                      child: IconButton(
-                       onPressed: (){
-      
-                       },
-                        icon:Icon(Icons.add_shopping_cart_outlined)),
-                    ),
+            Positioned(
+              top: 10,
+              left: 15,
+              child: SafeArea(
+                child: customBackbutton1(
+                  onpress: () {
+                    Navigator.pop(context);
+                  },
+                ),
+              ),
+            ),
+            Positioned(
+              top: 330,
+              left: 320,
+              child: IconButton(
+                icon: const Icon(Icons.add_shopping_cart_outlined),
+                onPressed: () async {
+             
+                  // Call the static method from CartService
+                  await CartService.addToCart(
+                    context: context, // Pass the current context
+                    serviceName: widget.serviceName,
+                    image: widget.image,
+                    originalPrice: widget.originalPrice,
+                    discountPrice: widget.discountPrice,
+                    discount: widget.discount,
+                    rating: widget.rating,
+                    category: widget.category,
+                    serviceType: widget.serviceType,
+                  );
+                }, // Call the refactored addToCart function
+              ),
+            ),
           ],
         ),
       ),
       floatingActionButton: Container(
-                    width: double.infinity,
-                    decoration: BoxDecoration(
-                      color: Colors.black,
-                      borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        width: double.infinity,
+        decoration: BoxDecoration(
+          color: Colors.black,
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
+        child: Row(
+          children: [
+            Image.asset("assets/icons/dollar.png", scale: 2),
+            SizedBox(width: 10),
+            Text("$realPrice",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold)),
+            Text("/hour",
+                style: TextStyle(
+                    color: const Color.fromRGBO(133, 130, 130, 1),
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
+            Spacer(),
+            SizedBox(
+              height: 57,
+              width: 160,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: gradientgreen2.c,
+                ),
+                onPressed: () {
+                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
+                    backgroundColor: Colors.white,
+                    content: Text(
+                      "Selected: $formattedDate at $formattedTime",
+                      style: TextStyle(color: Colors.black),
                     ),
-                    padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
-                    child: Row(
-                      children: [
-                        Image.asset("assets/icons/dollar.png", scale: 2),
-                        SizedBox(width: 10),
-                        Text("Price",
-                            style: TextStyle(
-                                color: Colors.white,
-                                fontSize: 30,
-                                fontWeight: FontWeight.bold)),
-                        Text("/Day",
-                            style: TextStyle(
-                                color: const Color.fromRGBO(133, 130, 130, 1),
-                                fontSize: 20,
-                                fontWeight: FontWeight.bold)),
-                        Spacer(),
-                        SizedBox(
-                          height: 57,
-                          width: 160,
-                          child: ElevatedButton(
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: gradientgreen2.c,
-                            ),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                                backgroundColor: Colors.white,
-                                content: Text(
-                                  "Selected: $formattedDate at $formattedTime",
-                                  style: TextStyle(color: Colors.black),
-                                ),
-                              ));
-                            },
-                            child: Text("Book Now",
-                                style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 14,
-                                    color: Colors.white)),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
+                  ));
+                },
+                child: Text("Book Now",
+                    style: TextStyle(
+                        fontWeight: FontWeight.bold,
+                        fontSize: 14,
+                        color: Colors.white)),
+              ),
+            ),
+          ],
+        ),
+      ),
+      floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
 }
