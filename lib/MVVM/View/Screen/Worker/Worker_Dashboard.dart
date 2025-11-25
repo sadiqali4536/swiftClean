@@ -1,17 +1,432 @@
-import 'dart:io';
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:flutter/material.dart';
+// import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_main_page.dart';
+// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+
+// class WorkerDashboard extends StatefulWidget {
+//   const WorkerDashboard({super.key});
+
+//   @override
+//   State<WorkerDashboard> createState() => _WorkerDashboardState();
+// }
+
+// class _WorkerDashboardState extends State<WorkerDashboard> {
+//   final user = FirebaseAuth.instance.currentUser;
+
+//   @override
+//   Widget build(BuildContext context) {
+//     if (user == null) {
+//       return const Scaffold(
+//         body: Center(child: Text("Please login first.")),
+//       );
+//     }
+
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text("Worker Dashboard"),
+//         backgroundColor: gradientgreen2.c,
+//         foregroundColor: Colors.white,
+//         actions: [
+//           IconButton(
+//             icon: const Icon(Icons.person_outline),
+//             onPressed: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(builder: (_) => const WorkerMainPage()),
+//               );
+//             },
+//           ),
+//         ],
+//       ),
+//       body: StreamBuilder<QuerySnapshot>(
+//         stream: FirebaseFirestore.instance.collection('bookings').snapshots(),
+//         builder: (context, snapshot) {
+//           if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+//           final allBookings = snapshot.data!.docs;
+
+//           final myRequested = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data.containsKey('workerId') &&
+//                 data['workerId'] == user!.uid &&
+//                 data['status'] == 'requested';
+//           }).toList();
+
+//           final myApproved = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data.containsKey('workerId') &&
+//                 data['workerId'] == user!.uid &&
+//                 data['status'] == 'approved';
+//           }).toList();
+
+//           final myCompleted = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data.containsKey('workerId') &&
+//                 data['workerId'] == user!.uid &&
+//                 data['status'] == 'completed';
+//           }).toList();
+
+//           final available = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data['status'] == 'pending';
+//           }).toList();
+
+//           final hasActiveJob = myRequested.isNotEmpty || myApproved.isNotEmpty;
+
+//           return ListView(
+//             padding: const EdgeInsets.all(16),
+//             children: [
+//               if (myRequested.isNotEmpty)
+//                 _jobCard(myRequested.first, "Requested (Waiting for Admin)", Colors.orange),
+
+//               if (myApproved.isNotEmpty)
+//                 _jobCard(myApproved.first, "In Progress", Colors.green, showCompleteButton: true),
+
+//               if (myCompleted.isNotEmpty) ...[
+//                 const SizedBox(height: 20),
+//                 const Text("Completed Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//                 ...myCompleted.map((doc) => _jobCard(doc, "Completed", Colors.grey)),
+//               ],
+
+//               const SizedBox(height: 20),
+//               const Divider(thickness: 1),
+//               const SizedBox(height: 10),
+
+//               const Text("Available Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//               const SizedBox(height: 10),
+
+//               if (hasActiveJob)
+//                 const Padding(
+//                   padding: EdgeInsets.all(12),
+//                   child: Text(
+//                     "⚠️ You already have an active job. Complete it before requesting a new one.",
+//                     style: TextStyle(color: Colors.red, fontSize: 15),
+//                     textAlign: TextAlign.center,
+//                   ),
+//                 )
+//               else if (available.isEmpty)
+//                 const Text("No jobs available at the moment.")
+//               else
+//                 ...available.map((doc) => _availableJobCard(doc)),
+//             ],
+//           );
+//         },
+//       ),
+//     );
+//   }
+
+//   Widget _jobCard(QueryDocumentSnapshot doc, String label, Color color, {bool showCompleteButton = false}) {
+//     final data = doc.data() as Map<String, dynamic>;
+
+//     return Card(
+//       elevation: 4,
+//       child: ListTile(
+//         title: Text(data['serviceTitle'] ?? 'No title'),
+//         subtitle: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text("Category: ${data['category'] ?? ''}"),
+//             Text("Status: $label"),
+//             Text("Price: ₹${data['discountPrice'] ?? '0'}"),
+//           ],
+//         ),
+//         trailing: showCompleteButton
+//             ? ElevatedButton(
+//                 onPressed: () => _markCompleted(doc.id),
+//                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+//                 child: const Text("Complete"),
+//               )
+//             : null,
+//       ),
+//     );
+//   }
+
+//   Widget _availableJobCard(QueryDocumentSnapshot doc) {
+//     final data = doc.data() as Map<String, dynamic>;
+
+//     return Card(
+//       elevation: 3,
+//       child: ListTile(
+//         title: Text(data['serviceTitle'] ?? ''),
+//         subtitle: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text("Category: ${data['category'] ?? ''}"),
+//             Text("Price: ₹${data['discountPrice'] ?? '0'}"),
+//           ],
+//         ),
+//         trailing: ElevatedButton(
+//           onPressed: () => _requestJob(doc.id),
+//           style: ElevatedButton.styleFrom(backgroundColor: gradientgreen2.c),
+//           child: const Text("Request"),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Future<void> _requestJob(String bookingId) async {
+//     final user = FirebaseAuth.instance.currentUser;
+//     if (user == null) return;
+
+//     await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+//       'status': 'requested',
+//       'workerId': user.uid.toString(),
+//       'workerName': user.workerName ?? '',
+//     });
+
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+//       content: Text("✅ Job requested. Waiting for admin approval."),
+//     ));
+//   }
+
+//   Future<void> _markCompleted(String bookingId) async {
+//     await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+//       'status': 'completed',
+//     });
+
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+//       content: Text("✅ Job marked as completed."),
+//     ));
+//   }
+// }
+
+// extension on User {
+//   get workerName => null;
+// }
+// import 'package:cloud_firestore/cloud_firestore.dart';
+// import 'package:firebase_auth/firebase_auth.dart';
+// import 'package:flutter/material.dart';
+// import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_main_page.dart';
+// import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
+
+// class WorkerDashboard extends StatefulWidget {
+//   const WorkerDashboard({super.key});
+
+//   @override
+//   State<WorkerDashboard> createState() => _WorkerDashboardState();
+// }
+
+// class _WorkerDashboardState extends State<WorkerDashboard> {
+//   final user = FirebaseAuth.instance.currentUser;
+//   String? workerCategory;
+//   String? workerName;
+
+//   @override
+//   void initState() {
+//     super.initState();
+//     fetchWorkerDetails();
+//   }
+
+//   Future<void> fetchWorkerDetails() async {
+//     if (user == null) return;
+
+//     final doc = await FirebaseFirestore.instance
+//         .collection('workers')
+//         .doc(user!.uid)
+//         .get();
+
+//     if (doc.exists) {
+//       final data = doc.data();
+//       if (data != null) {
+//         setState(() {
+//           workerCategory = data['category']?.toString().toLowerCase();
+//           workerName = data['name'] ?? 'Unnamed';
+//         });
+//       }
+//     }
+//   }
+
+//   @override
+//   Widget build(BuildContext context) {
+//     if (user == null) {
+//       return const Scaffold(
+//         body: Center(child: Text("Please login first.")),
+//       );
+//     }
+
+//     if (workerCategory == null) {
+//       return const Scaffold(
+//         body: Center(child: CircularProgressIndicator()),
+//       );
+//     }
+
+//     return Scaffold(
+//       appBar: AppBar(
+//         title: const Text("Worker Dashboard"),
+//         backgroundColor: gradientgreen2.c,
+//         foregroundColor: Colors.white,
+//         actions: [
+//           IconButton(
+//             icon: const Icon(Icons.person_outline),
+//             onPressed: () {
+//               Navigator.push(
+//                 context,
+//                 MaterialPageRoute(builder: (_) => const WorkerMainPage()),
+//               );
+//             },
+//           ),
+//         ],
+//       ),
+//       body: StreamBuilder<QuerySnapshot>(
+//         stream: FirebaseFirestore.instance.collection('bookings').snapshots(),
+//         builder: (context, snapshot) {
+//           if (!snapshot.hasData) {
+//             return const Center(child: CircularProgressIndicator());
+//           }
+
+//           final allBookings = snapshot.data!.docs;
+
+//           final myRequested = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data['workerId'] == user!.uid && data['status'] == 'requested';
+//           }).toList();
+
+//           final myApproved = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data['workerId'] == user!.uid && data['status'] == 'approved';
+//           }).toList();
+
+//           final myCompleted = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             return data['workerId'] == user!.uid && data['status'] == 'completed';
+//           }).toList();
+
+//           final available = allBookings.where((doc) {
+//             final data = doc.data() as Map<String, dynamic>;
+//             final bookingCategory = data['category']?.toString().toLowerCase();
+//             return data['status'] == 'pending' && bookingCategory == workerCategory;
+//           }).toList();
+
+//           final hasActiveJob = myRequested.isNotEmpty || myApproved.isNotEmpty;
+
+//           return ListView(
+//             padding: const EdgeInsets.all(16),
+//             children: [
+//               if (myRequested.isNotEmpty)
+//                 _jobCard(myRequested.first, "Requested (Waiting for Admin)", Colors.orange),
+
+//               if (myApproved.isNotEmpty)
+//                 _jobCard(myApproved.first, "In Progress", Colors.green, showCompleteButton: true),
+
+//               if (myCompleted.isNotEmpty) ...[
+//                 const SizedBox(height: 20),
+//                 const Text("Completed Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//                 ...myCompleted.map((doc) => _jobCard(doc, "Completed", Colors.grey)),
+//               ],
+
+//               const SizedBox(height: 20),
+//               const Divider(thickness: 1),
+//               const SizedBox(height: 10),
+
+//               const Text("Available Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+//               const SizedBox(height: 10),
+
+//               if (hasActiveJob)
+//                 const Padding(
+//                   padding: EdgeInsets.all(12),
+//                   child: Text(
+//                     "⚠️ You already have an active job. Complete it before requesting a new one.",
+//                     style: TextStyle(color: Colors.red, fontSize: 15),
+//                     textAlign: TextAlign.center,
+//                   ),
+//                 )
+//               else if (available.isEmpty)
+//                 const Text("No jobs available at the moment.")
+//               else
+//                 ...available.map((doc) => _availableJobCard(doc)),
+//             ],
+//           );
+//         },
+//       ),
+//     );
+//   }
+
+//   Widget _jobCard(QueryDocumentSnapshot doc, String label, Color color, {bool showCompleteButton = false}) {
+//     final data = doc.data() as Map<String, dynamic>;
+
+//     return Card(
+//       elevation: 4,
+//       child: ListTile(
+//         title: Text(data['serviceTitle'] ?? 'No title'),
+//         subtitle: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text("Category: ${data['category'] ?? ''}"),
+//             Text("Status: $label"),
+//             Text("Price: ₹${data['discountPrice'] ?? '0'}"),
+//             Text("Worker: ${data['workerName'] ?? 'Not assigned'}"),
+//           ],
+//         ),
+//         trailing: showCompleteButton
+//             ? ElevatedButton(
+//                 onPressed: () => _markCompleted(doc.id),
+//                 style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+//                 child: const Text("Complete"),
+//               )
+//             : null,
+//       ),
+//     );
+//   }
+
+//   Widget _availableJobCard(QueryDocumentSnapshot doc) {
+//     final data = doc.data() as Map<String, dynamic>;
+
+//     return Card(
+//       elevation: 3,
+//       child: ListTile(
+//         title: Text(data['serviceTitle'] ?? ''),
+//         subtitle: Column(
+//           crossAxisAlignment: CrossAxisAlignment.start,
+//           children: [
+//             Text("Category: ${data['category'] ?? ''}"),
+//             Text("Price: ₹${data['discountPrice'] ?? '0'}"),
+//           ],
+//         ),
+//         trailing: ElevatedButton(
+//           onPressed: () => _requestJob(doc.id),
+//           style: ElevatedButton.styleFrom(backgroundColor: gradientgreen2.c),
+//           child: const Text("Request"),
+//         ),
+//       ),
+//     );
+//   }
+
+//   Future<void> _requestJob(String bookingId) async {
+//     if (user == null || workerName == null) return;
+
+//     await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+//       'status': 'requested',
+//       'workerId': user!.uid,
+//       'workerName': workerName,
+//     });
+
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+//       content: Text("✅ Job requested. Waiting for admin approval."),
+//     ));
+//   }
+
+//   Future<void> _markCompleted(String bookingId) async {
+//     await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+//       'status': 'completed',
+//     });
+
+//     if (!mounted) return;
+//     ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+//       content: Text("✅ Job marked as completed."),
+//     ));
+//   }
+// }
+
 
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
-import 'package:image_picker/image_picker.dart';
-import 'package:swiftclean_project/MVVM/View/Authentication/LoginandSigning.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/Edit_address.dart';
-import 'package:swiftclean_project/MVVM/View/Screen/Worker/check_out_page.dart';
-import 'package:swiftclean_project/MVVM/model/services/firebaseauthservices.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/Worker/worker_main_page.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
-import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
-import 'package:swiftclean_project/main.dart';
 
 class WorkerDashboard extends StatefulWidget {
   const WorkerDashboard({super.key});
@@ -21,485 +436,208 @@ class WorkerDashboard extends StatefulWidget {
 }
 
 class _WorkerDashboardState extends State<WorkerDashboard> {
-  File? _Image;
-  final ImagePicker picker = ImagePicker();
+  final user = FirebaseAuth.instance.currentUser;
+  String? workerName;
+  String? workerCategory;
 
-  Future<void> pickimage(ImageSource Source) async {
-    final PickedFile = await picker.pickImage(source: Source);
+  @override
+  void initState() {
+    super.initState();
+    fetchWorkerDetails();
+  }
 
-    if (PickedFile != null) {
-      setState(() {
-        _Image = File(PickedFile.path);
-      });
+  Future<void> fetchWorkerDetails() async {
+    if (user == null) return;
+
+    final doc = await FirebaseFirestore.instance
+        .collection('workers')
+        .doc(user!.uid)
+        .get();
+
+    if (doc.exists) {
+      final data = doc.data();
+      if (data != null) {
+        setState(() {
+          workerName = data['name'] ?? 'Unnamed';
+          workerCategory = data['category']?.toString().toLowerCase();
+        });
+      }
     }
   }
 
-  void _showImagePicker() {
-    showModalBottomSheet(
-        context: context,
-        builder: (BuildContext Context) {
-          return SafeArea(
-              child: Wrap(
+  @override
+  Widget build(BuildContext context) {
+    if (user == null) {
+      return const Scaffold(
+        body: Center(child: Text("Please login first.")),
+      );
+    }
+
+    return Scaffold(
+      appBar: AppBar(
+        title: const Text("Worker Dashboard"),
+        backgroundColor: gradientgreen2.c,
+        foregroundColor: Colors.white,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.person_outline),
+            onPressed: () {
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const WorkerMainPage()),
+              );
+            },
+          ),
+        ],
+      ),
+      body: StreamBuilder<QuerySnapshot>(
+        stream: FirebaseFirestore.instance.collection('bookings').snapshots(),
+        builder: (context, snapshot) {
+          if (!snapshot.hasData) return const Center(child: CircularProgressIndicator());
+
+          final allBookings = snapshot.data!.docs;
+
+          final myRequested = allBookings.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['workerId'] == user!.uid &&
+                data['status'] == 'requested';
+          }).toList();
+
+          final myApproved = allBookings.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['workerId'] == user!.uid &&
+                data['status'] == 'approved';
+          }).toList();
+
+          final myCompleted = allBookings.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['workerId'] == user!.uid &&
+                data['status'] == 'completed';
+          }).toList();
+
+          final available = allBookings.where((doc) {
+            final data = doc.data() as Map<String, dynamic>;
+            return data['status'] == 'pending' &&
+                (data['category']?.toString().toLowerCase() == workerCategory);
+          }).toList();
+
+          final hasActiveJob = myRequested.isNotEmpty || myApproved.isNotEmpty;
+
+          return ListView(
+            padding: const EdgeInsets.all(16),
             children: [
-              ListTile(
-                trailing: Icon(Icons.cancel),
-                onTap: () {
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.photo_library),
-                title: Text("Choose from Gallery"),
-                onTap: () {
-                  Navigator.pop(context);
-                  pickimage(ImageSource.gallery);
-                },
-              ),
-              ListTile(
-                leading: Icon(Icons.camera_alt_outlined),
-                title: Text("Take a Photo"),
-                onTap: () {
-                  Navigator.pop(context);
-                  pickimage(ImageSource.camera);
-                },
-              ),
-              if (_Image != null)
-                ListTile(
-                  leading: Icon(Icons.delete, color: Colors.red),
-                  title: Text("Remove Profile Picture"),
-                  onTap: () {
-                    setState(() {
-                      _Image = null;
-                    });
-                    Navigator.pop(context);
-                  },
-                ),
+              if (myRequested.isNotEmpty)
+                _jobCard(myRequested.first, "Requested (Waiting for Admin)", Colors.orange),
+
+              if (myApproved.isNotEmpty)
+                _jobCard(myApproved.first, "In Progress", Colors.green, showCompleteButton: true),
+
+              if (myCompleted.isNotEmpty) ...[
+                const SizedBox(height: 20),
+                const Text("Completed Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+                ...myCompleted.map((doc) => _jobCard(doc, "Completed", Colors.grey)),
+              ],
+
+              const SizedBox(height: 20),
+              const Divider(thickness: 1),
+              const SizedBox(height: 10),
+
+              const Text("Available Jobs", style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const SizedBox(height: 10),
+
+              if (hasActiveJob)
+                const Padding(
+                  padding: EdgeInsets.all(12),
+                  child: Text(
+                    "⚠️ You already have an active job. Complete it before requesting a new one.",
+                    style: TextStyle(color: Colors.red, fontSize: 15),
+                    textAlign: TextAlign.center,
+                  ),
+                )
+              else if (available.isEmpty)
+                const Text("No jobs available at the moment.")
+              else
+                ...available.map((doc) => _availableJobCard(doc)),
             ],
-          ));
-        });
+          );
+        },
+      ),
+    );
   }
 
-  Widget _buildConfirmationDialog(String message, VoidCallback onConfirm) {
-    return Dialog(
-      shape: RoundedRectangleBorder(
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Container(
-        height: 270,
-        width: 374,
-        padding: EdgeInsets.all(20),
-        child: Column(
+  Widget _jobCard(QueryDocumentSnapshot doc, String label, Color color, {bool showCompleteButton = false}) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    return Card(
+      elevation: 4,
+      child: ListTile(
+        title: Text(data['serviceTitle'] ?? 'No title'),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
-              height: 60,
-              width: 60,
-              decoration: BoxDecoration(
-                color: gradientgreen2.c,
-                borderRadius: BorderRadius.circular(40),
-              ),
-              child: Icon(
-                Icons.question_mark,
-                size: 30,
-                color: Colors.white,
-              ),
-            ),
-            SizedBox(height: 30),
-            Text(
-              message,
-              style: TextStyle(
-                  fontSize: 20,
-                  color: Color.fromRGBO(125, 117, 128, 1),
-                  fontWeight: FontWeight.bold),
-              textAlign: TextAlign.center,
-            ),
-            Spacer(),
-            Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: const Color.fromARGB(255, 204, 206, 200)),
-                    child: TextButton(
-                        onPressed: onConfirm,
-                        child: Text(
-                          "Yes",
-                          style: TextStyle(
-                              fontWeight: FontWeight.bold,
-                              fontSize: 20,
-                              color: const Color.fromARGB(255, 0, 0, 0)),
-                        )),
-                  ),
-                ),
-                SizedBox(width: 10),
-                Expanded(
-                  child: Container(
-                    height: 56,
-                    decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        color: gradientgreen2.c),
-                    child: TextButton(
-                        onPressed: () {
-                          Navigator.pop(context);
-                        },
-                        child: Text(
-                          "No",
-                          style: TextStyle(
-                              fontSize: 20,
-                              color: const Color.fromRGBO(217, 217, 217, 1)),
-                        )),
-                  ),
-                ),
-              ],
-            ),
+            Text("Category: ${data['category'] ?? ''}"),
+            Text("Status: $label"),
+            Text("Worker: ${data['workerName'] ?? 'Not assigned'}"),
+            Text("Price: ₹${data['discountPrice'] ?? '0'}"),
           ],
+        ),
+        trailing: showCompleteButton
+            ? ElevatedButton(
+                onPressed: () => _markCompleted(doc.id),
+                style: ElevatedButton.styleFrom(backgroundColor: Colors.green),
+                child: const Text("Complete"),
+              )
+            : null,
+      ),
+    );
+  }
+
+  Widget _availableJobCard(QueryDocumentSnapshot doc) {
+    final data = doc.data() as Map<String, dynamic>;
+
+    return Card(
+      elevation: 3,
+      child: ListTile(
+        title: Text(data['serviceTitle'] ?? ''),
+        subtitle: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text("Category: ${data['category'] ?? ''}"),
+            Text("Price: ₹${data['discountPrice'] ?? '0'}"),
+          ],
+        ),
+        trailing: ElevatedButton(
+          onPressed: () => _requestJob(doc.id),
+          style: ElevatedButton.styleFrom(backgroundColor: gradientgreen2.c),
+          child: const Text("Request"),
         ),
       ),
     );
   }
 
-  @override
-  Widget build(BuildContext context) {
-    return Scaffold(
-      backgroundColor: Color.fromRGBO(255, 255, 255, 1),
-      body: FutureBuilder(
-        future: FirebaseFirestore.instance.collection('workers').doc(FirebaseAuth.instance.currentUser?.uid).get(),
-        builder: (context, snapshot) {
-          if(snapshot.connectionState == ConnectionState.waiting){
-            return Center(child: CircularProgressIndicator(color: gradientgreen1.c,),);
-          }
+  Future<void> _requestJob(String bookingId) async {
+    if (user == null || workerName == null) return;
 
-          final data = snapshot.data?.data();
+    await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+      'status': 'requested',
+      'workerId': user!.uid,
+      'workerName': workerName,
+    });
 
-          if(data == null){
-            return Center(child: Text('No user found'),);
-          }
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("✅ Job requested. Waiting for admin approval."),
+    ));
+  }
 
-          return SingleChildScrollView(
-            child: Padding(
-              padding: EdgeInsets.symmetric(horizontal: 25),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  SizedBox(height: 80),
-                  // Profile Section
-                  Row(
-                    children: [
-                      Stack(
-                        children: [
-                          Container(
-                            height: 83,
-                            width: 83,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(40),
-                                border: Border.all(
-                                    color: const Color.fromARGB(255, 111, 111, 111))),
-                            child: GestureDetector(
-                              onTap: _showImagePicker,
-                              child: CircleAvatar(
-                                radius: 34,
-                                backgroundColor: Colors.white,
-                                backgroundImage: _Image != null ? FileImage(_Image!) : null,
-                                child: _Image == null
-                                    ? Icon(Icons.person, size: 44, color: Colors.black)
-                                    : null,
-                              ),
-                            ),
-                          ),
-                          Positioned(
-                            bottom: -5,
-                            right: -5,
-                            child: GestureDetector(
-                              onTap: _showImagePicker,
-                              child: Container(
-                                padding: EdgeInsets.all(5),
-                                decoration: BoxDecoration(
-                                  shape: BoxShape.circle,
-                                  color: Colors.white,
-                                  border: Border.all(
-                                      color: const Color.fromARGB(255, 139, 139, 139), width: 1),
-                                ),
-                                child: Icon(
-                                  Icons.camera_alt,
-                                  color: Colors.black,
-                                  size: 20,
-                                ),
-                              ),
-                            ),
-                          ),
-                        ],
-                      ),
-                      SizedBox(width: 15),
-                      Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Text(
-                            "Hello ${data['username']}",
-                            style: TextStyle(fontSize: 25, fontWeight: FontWeight.bold),
-                          ),
-                          Text(
-                            "Welcome Back !",
-                            style: TextStyle(fontSize: 16, color: Colors.grey),
-                          ),
-                        ],
-                      ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 25),
-                  
-                  // Service Type
-                  Text(
-                    data["category"],
-                    style: TextStyle(fontSize: 15, fontWeight: FontWeight.w500),
-                  ),
-                  
-                  SizedBox(height: 30),
-                  
-                  // Stats Cards
-                  Row(
-                    children: [
-                      Expanded(
-                        child: Material(
-                          elevation: 13,
-                          shadowColor: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            height: 136,
-                            decoration: BoxDecoration(
-                              color: primary.c,
-                              borderRadius: BorderRadius.circular(10),
-                              border: Border.all(color: Color.fromRGBO(223, 220, 220, 1)),
-                            ),
-                            child: Column(
-                              children: [
-                                SizedBox(height: 20),
-                                Container(
-                                  height: 38,
-                                  width: 38,
-                                  decoration: BoxDecoration(
-                                      color: const Color.fromRGBO(153, 255, 9, 0.25),
-                                      borderRadius: BorderRadius.circular(18)),
-                                  child: Image.asset(
-                                    "assets/icons/worker.png",
-                                    color: Color.fromRGBO(53, 120, 1, 1),
-                                  ),
-                                ),
-                                SizedBox(height: 20),
-                                Text(
-                                  "0",
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 5),
-                                Text(
-                                  "Total Work",
-                                  style: TextStyle(color: formletters.c),
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                      SizedBox(width: 15),
-                      Expanded(
-                        child: Material(
-                          elevation: 13,
-                          shadowColor: Colors.black.withOpacity(0.4),
-                          borderRadius: BorderRadius.circular(10),
-                          child: Container(
-                            height: 136,
-                            decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(10),
-                                border: Border.all(color: Color.fromRGBO(223, 220, 220, 1)),
-                                color: primary.c),
-                            child: Column(
-                              children: [
-                                SizedBox(height: 20),
-                                Container(
-                                  height: 38,
-                                  width: 38,
-                                  decoration: BoxDecoration(
-                                      color: const Color.fromRGBO(153, 255, 9, 0.25),
-                                      borderRadius: BorderRadius.circular(18)),
-                                  child: Image.asset("assets/icons/money.png"),
-                                ),
-                                SizedBox(height: 20),
-                                Text(
-                                  "0",
-                                  style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold),
-                                ),
-                                SizedBox(height: 5),
-                                Text(
-                                  "Total Payment",
-                                  style: TextStyle(color: formletters.c),
-                                )
-                              ],
-                            ),
-                          ),
-                        ),
-                      ),
-                    ],
-                  ),
-                  
-                  SizedBox(height: 44),
-                  
-                  // Address Card
-                  Material(
-                    elevation: 12,
-                    shadowColor: Colors.black.withOpacity(0.5),
-                    borderRadius: BorderRadius.circular(20),
-                    child: Container(
-                      height: 137,
-                      padding: EdgeInsets.all(15),
-                      decoration: BoxDecoration(
-                          borderRadius: BorderRadius.circular(20),
-                          border: Border.all(color: Color.fromRGBO(223, 220, 220, 1)),
-                          color: primary.c),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          Row(
-                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                            children: [
-                              Text(
-                                data['phone'],
-                                style: TextStyle(color: black.c, fontSize: 17),
-                              ),
-                              GestureDetector(
-                                  onTap: () {
-                                    Navigator.push(
-                                        context,
-                                        MaterialPageRoute(
-                                            builder: (context) => EditAddress()));
-                                  },
-                                  child: Image.asset("assets/icons/edit.png"))
-                            ],
-                          ),
-                          SizedBox(height: 15),
-                          Expanded(
-                            child: Text(
-                              "15/24, Rose Villa MG Road, Kochi - 682001 Kerala, India",
-                              style: TextStyle(fontSize: 17),
-                            ),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 30),
-                  
-                  // Check out Work Payment
-                  Material(
-                    elevation: 5,
-                    borderRadius: BorderRadius.circular(10),
-                    child: GestureDetector(
-                      onTap: () {
-                        Navigator.push(context,
-                            MaterialPageRoute(builder: (context) => CheckOutPage()));
-                      },
-                      child: Container(
-                        height: 53,
-                        padding: EdgeInsets.symmetric(horizontal: 16),
-                        decoration: BoxDecoration(
-                            border: Border.all(
-                                color: const Color.fromARGB(221, 227, 227, 227)),
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(10)),
-                        child: Row(
-                          children: [
-                            Image.asset(
-                              "assets/icons/clock_payment.png",
-                              scale: 15,
-                            ),
-                            SizedBox(width: 8),
-                            Text(
-                              "Check out Work Payment",
-                              style: TextStyle(fontSize: 14),
-                            ),
-                            Spacer(),
-                            Icon(Icons.arrow_forward_ios)
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 27),
-                  
-                  // Delete Account
-                  Material(
-                    elevation: 13,
-                    shadowColor: Colors.black.withOpacity(0.4),
-                    borderRadius: BorderRadius.circular(15),
-                    child: GestureDetector(
-                      onTap: () {
-                        showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return _buildConfirmationDialog(
-                                  "Are you sure to delete your account?", () {});
-                            });
-                      },
-                      child: Container(
-                        height: 53,
-                        padding: EdgeInsets.symmetric(horizontal: 20),
-                        decoration: BoxDecoration(
-                            color: primary.c,
-                            border: Border.all(color: Color.fromRGBO(223, 220, 220, 1)),
-                            borderRadius: BorderRadius.circular(15)),
-                        child: Row(
-                          children: [
-                            Image.asset("assets/icons/delete_user.png"),
-                            SizedBox(width: 10),
-                            Text(
-                              "Delete Account",
-                              style: TextStyle(color: black.c),
-                            )
-                          ],
-                        ),
-                      ),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 47),
-                  
-                  // Logout
-                  Center(
-                    child: GestureDetector(
-                      onTap: () {
-                        showDialog(
-                            context: context,
-                            builder: (BuildContext context) {
-                              return _buildConfirmationDialog(
-                                  "Are you sure want to logout", () async {
-                                await FirebaseAuthServices().signOut(context);
-                                Get.off(LoginAndSigning());
-                              });
-                            });
-                      },
-                      child: Row(
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          Image.asset("assets/icons/Logout_button.png"),
-                          SizedBox(width: 5),
-                          Text(
-                            "Logout",
-                            style: TextStyle(color: black.c),
-                          )
-                        ],
-                      ),
-                    ),
-                  ),
-                  
-                  SizedBox(height: 50),
-                ],
-              ),
-            ),
-          );
-        }
-      ),
-    );
+  Future<void> _markCompleted(String bookingId) async {
+    await FirebaseFirestore.instance.collection('bookings').doc(bookingId).update({
+      'status': 'completed',
+    });
+
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(const SnackBar(
+      content: Text("✅ Job marked as completed."),
+    ));
   }
 }

@@ -161,11 +161,37 @@ Future<void> loadUsername() async {
 
                                     )));
                                   } else if (category == 'Interior') {
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => InteriorBookingPage()));
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => InteriorBookingPage(
+                                      category: filtered[index]['category'],
+                                      serviceName: filtered[index]['service_name'],
+                                      rating: filtered[index]['rating'],
+                                      originalPrice: filtered[index]['original_price'],
+                                      discount: filtered[index]['discount'],
+                                      image: filtered[index]['image'],
+                                      discountPrice: filtered[index]['price'],
+                                      serviceType: filtered[index]['service_type'],
+                                    )));
                                   } else if (category == 'Vehicle') {
-                                    Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleBookingPage()));
+                                    Navigator.push(context, MaterialPageRoute(builder: (_) => VehicleBookingPage(
+                                       category: filtered[index]['category'],
+                                      serviceName: filtered[index]['service_name'],
+                                      rating: filtered[index]['rating'],
+                                      originalPrice: filtered[index]['original_price'],
+                                      discount: filtered[index]['discount'],
+                                      image: filtered[index]['image'],
+                                      discountPrice: filtered[index]['price'],
+                                      serviceType: filtered[index]['service_type'],
+                                    )));
                                   } else if (category == 'Pet') {
                                     Navigator.push(context, MaterialPageRoute(builder: (_) => PetCleaning(
+                                       category: filtered[index]['category'],
+                                      serviceName: filtered[index]['service_name'],
+                                      rating: filtered[index]['rating'],
+                                      originalPrice: filtered[index]['original_price'],
+                                      discount: filtered[index]['discount'],
+                                      image: filtered[index]['image'],
+                                      discountPrice: filtered[index]['price'],
+                                      serviceType: filtered[index]['service_type'],
 
                                     )));
                                   } else if (category == 'Home') {

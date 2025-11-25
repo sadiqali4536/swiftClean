@@ -18,8 +18,7 @@ class _CheckOutPageState extends State<CheckOutPage> {
 
   final Map<String, int> workTypes = {
     'Home Cleaning': 200,
-    'Car Washing': 150,
-    'Pet Cleaning': 180,
+    'Room Cleaning': 180,
     'Grass Cutting': 170,
   };
 

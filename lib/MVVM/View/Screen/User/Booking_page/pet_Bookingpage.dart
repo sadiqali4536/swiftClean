@@ -1,12 +1,37 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
+    as CartService;
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class PetCleaning extends StatefulWidget {
-   final String ?serviceId;
-  const PetCleaning({super.key, this.serviceId});
+  final String? serviceId;
+  String? category;
+  String? serviceName;
+  int? rating;
+  String? originalPrice;
+  String? discount;
+  String? image;
+  String? discountPrice;
+  String? serviceType;
+  String? selectedPet;
+  PetCleaning(
+      {super.key,
+      this.serviceId,
+      this.category,
+      this.serviceName,
+      this.rating,
+      this.originalPrice,
+      this.discount,
+      this.image,
+      this.discountPrice,
+      this.serviceType});
 
   @override
   State<PetCleaning> createState() => _PetCleaningState();
@@ -16,7 +41,66 @@ class _PetCleaningState extends State<PetCleaning> {
   DateTime selectedDate = DateTime.now();
   int selectedIndex = 0;
 
-   int hour = DateTime.now().hour %12;
+  bool isAddedToCart = false; 
+
+  @override
+  void initState() {
+    super.initState();
+    checkIfServiceInCart();
+  }
+
+
+ bool isBookingFormComplete() {
+    if (widget.serviceName == null ||
+        widget.category == null ||
+        widget.serviceType == null ||
+        widget.discountPrice == null ||
+        selectedPet == null||
+        hour < 1 ||
+        hour > 12 ||
+        minute < 0 ||
+        minute > 59 ||
+        meridiem.isEmpty) {
+      return false;
+    }
+
+    int convertedHour = hour;
+    if (meridiem == 'PM' && hour != 12) convertedHour += 12;
+    if (meridiem == 'AM' && hour == 12) convertedHour = 0;
+
+    DateTime selectedDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      convertedHour,
+      minute,
+    );
+
+    return selectedDateTime.isAfter(DateTime.now());
+  }
+  Future<void> checkIfServiceInCart() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final cartRef = FirebaseFirestore.instance
+        .collection('carts')
+        .doc(userId)
+        .collection('cartItems');
+
+    final existing = await cartRef
+        .where('serviceName', isEqualTo: widget.serviceName)
+        .where('category', isEqualTo: widget.category)
+        .where('serviceType', isEqualTo: widget.serviceType)
+        .get();
+
+    if (mounted) {
+      setState(() {
+        isAddedToCart = existing.docs.isNotEmpty;
+      });
+    }
+  }
+
+  int hour = DateTime.now().hour % 12;
   int minute = DateTime.now().minute;
   String meridiem = 'AM';
 
@@ -32,7 +116,6 @@ class _PetCleaningState extends State<PetCleaning> {
     'Ear cleaning and teeth brushing'
   ];
 
-  // Generate next 30 dates
   List<DateTime> getWeekDates() {
     final today = DateTime.now();
     return List.generate(30, (index) => today.add(Duration(days: index)));
@@ -134,14 +217,14 @@ class _PetCleaningState extends State<PetCleaning> {
           children: [
             Column(
               children: [
-                 SizedBox(
-                width: double.infinity,
-                height: 300,
-                child: Image.asset(
-                  "assets/image/pet2.png",
-                  fit: BoxFit.cover,
+                SizedBox(
+                  width: double.infinity,
+                  height: 300,
+                  child: Image.asset(
+                    "assets/image/pet2.png",
+                    fit: BoxFit.cover,
+                  ),
                 ),
-              ),
                 Container(
                   width: double.infinity,
                   decoration: BoxDecoration(
@@ -164,7 +247,7 @@ class _PetCleaningState extends State<PetCleaning> {
                               fontSize: 22, fontWeight: FontWeight.w600),
                         ),
                         const SizedBox(height: 15),
-                              
+
                         // Offers grid buttons
                         Wrap(
                           spacing: 6,
@@ -175,14 +258,14 @@ class _PetCleaningState extends State<PetCleaning> {
                                   elevation: 3,
                                   borderRadius: BorderRadius.circular(20),
                                   child: Container(
-                                    width:
-                                        (MediaQuery.of(context).size.width - 60) /
-                                            2,
-                                    padding:
-                                        const EdgeInsets.symmetric(vertical: 12),
+                                    width: (MediaQuery.of(context).size.width -
+                                            60) /
+                                        2,
+                                    padding: const EdgeInsets.symmetric(
+                                        vertical: 12),
                                     decoration: BoxDecoration(
-                                      color:
-                                          const Color.fromARGB(255, 243, 243, 243),
+                                      color: const Color.fromARGB(
+                                          255, 243, 243, 243),
                                       borderRadius: BorderRadius.circular(20),
                                     ),
                                     child: Center(
@@ -200,7 +283,7 @@ class _PetCleaningState extends State<PetCleaning> {
                               .toList(),
                         ),
                         const SizedBox(height: 25),
-                              
+
                         // Date selector label
                         const Text(
                           "Select Date",
@@ -208,19 +291,19 @@ class _PetCleaningState extends State<PetCleaning> {
                               fontSize: 20, fontWeight: FontWeight.w500),
                         ),
                         const SizedBox(height: 10),
-                              
+
                         // Horizontal date selector
                         SizedBox(
                           height: 100,
                           child: ListView.builder(
-                            padding: EdgeInsets.only(left: 10,right: 10),
+                            padding: EdgeInsets.only(left: 10, right: 10),
                             scrollDirection: Axis.horizontal,
                             itemCount: getWeekDates().length,
                             itemBuilder: (context, index) {
                               final date = getWeekDates()[index];
                               final isSelected = index == selectedIndex;
                               final monthName = _getMonthName(date.month);
-                
+
                               return GestureDetector(
                                 onTap: () {
                                   setState(() {
@@ -279,11 +362,12 @@ class _PetCleaningState extends State<PetCleaning> {
                           ),
                         ),
                         const SizedBox(height: 20),
-                              
+
                         // Time selector label
                         Padding(
                           padding: const EdgeInsets.all(10),
-                          child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          child: Row(
+                            mainAxisAlignment: MainAxisAlignment.spaceBetween,
                             children: [
                               const Text(
                                 "Select Time",
@@ -309,7 +393,7 @@ class _PetCleaningState extends State<PetCleaning> {
                           ),
                         ),
                         const SizedBox(height: 10),
-                              
+
                         // Time selector row (hour, minute, AM/PM)
                         Row(
                           mainAxisAlignment: MainAxisAlignment.center,
@@ -353,18 +437,19 @@ class _PetCleaningState extends State<PetCleaning> {
                                   elevation: 6,
                                   borderRadius: BorderRadius.circular(30),
                                   child: IconButton(
-                                    icon: Icon(Icons.remove, color: gradientgreen2.c),
+                                    icon: Icon(Icons.remove,
+                                        color: gradientgreen2.c),
                                     onPressed: decrementHour,
                                   ),
                                 ),
                               ],
                             ),
                             const SizedBox(width: 15),
-                              
+
                             const Text(":", style: TextStyle(fontSize: 24)),
-                              
+
                             const SizedBox(width: 15),
-                              
+
                             // Minute selector
                             Column(
                               children: [
@@ -372,7 +457,8 @@ class _PetCleaningState extends State<PetCleaning> {
                                   elevation: 6,
                                   borderRadius: BorderRadius.circular(30),
                                   child: IconButton(
-                                    icon: Icon(Icons.add, color: gradientgreen2.c),
+                                    icon: Icon(Icons.add,
+                                        color: gradientgreen2.c),
                                     onPressed: incrementMinute,
                                   ),
                                 ),
@@ -403,15 +489,16 @@ class _PetCleaningState extends State<PetCleaning> {
                                   elevation: 6,
                                   borderRadius: BorderRadius.circular(30),
                                   child: IconButton(
-                                    icon: Icon(Icons.remove, color: gradientgreen2.c),
+                                    icon: Icon(Icons.remove,
+                                        color: gradientgreen2.c),
                                     onPressed: decrementMinute,
                                   ),
                                 ),
                               ],
                             ),
-                              
+
                             const SizedBox(width: 20),
-                              
+
                             // AM/PM toggle buttons
                             Column(
                               children: [
@@ -420,14 +507,17 @@ class _PetCleaningState extends State<PetCleaning> {
                                     backgroundColor: meridiem == 'AM'
                                         ? gradientgreen2.c
                                         : const Color(0xFFE7E7E7),
-                                    foregroundColor:
-                                        meridiem == 'AM' ? Colors.white : Colors.black,
+                                    foregroundColor: meridiem == 'AM'
+                                        ? Colors.white
+                                        : Colors.black,
                                     shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12)),
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
                                     minimumSize: const Size(60, 44),
                                   ),
                                   onPressed: () => toggleMeridiem('AM'),
-                                  child: const Text("AM", style: TextStyle(fontSize: 18)),
+                                  child: const Text("AM",
+                                      style: TextStyle(fontSize: 18)),
                                 ),
                                 const SizedBox(height: 12),
                                 TextButton(
@@ -435,82 +525,90 @@ class _PetCleaningState extends State<PetCleaning> {
                                     backgroundColor: meridiem == 'PM'
                                         ? gradientgreen2.c
                                         : const Color(0xFFE7E7E7),
-                                    foregroundColor:
-                                        meridiem == 'PM' ? Colors.white : Colors.black,
+                                    foregroundColor: meridiem == 'PM'
+                                        ? Colors.white
+                                        : Colors.black,
                                     shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(12)),
+                                        borderRadius:
+                                            BorderRadius.circular(12)),
                                     minimumSize: const Size(60, 44),
                                   ),
                                   onPressed: () => toggleMeridiem('PM'),
-                                  child: const Text("PM", style: TextStyle(fontSize: 18)),
+                                  child: const Text("PM",
+                                      style: TextStyle(fontSize: 18)),
                                 ),
                               ],
                             ),
-                            SizedBox(width: 20,),
+                            SizedBox(
+                              width: 20,
+                            ),
                             Column(
-                          children: [
-                            Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(15),
-                              child: Container(
-                               height: 32,
-                               width: 32,
-                               decoration: BoxDecoration(
-                                borderRadius: BorderRadius.circular(15),
-                                color: Colors.white
-                               ),
-                              child: IconButton(
-                               padding: EdgeInsets.zero, 
-                               icon: Icon(Icons.add, color: gradientgreen3.c),
-                               onPressed: incrementCount,
-                               ),
-                                                         ),
-                            ),
-                           SizedBox(height: 5,),
-                            Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                height: 40,
-                                width: 47,
-                                decoration: BoxDecoration(
+                              children: [
+                                Material(
+                                  elevation: 4,
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: Container(
+                                    height: 32,
+                                    width: 32,
+                                    decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(15),
+                                        color: Colors.white),
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(Icons.add,
+                                          color: gradientgreen3.c),
+                                      onPressed: incrementCount,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: 5,
+                                ),
+                                Material(
+                                  elevation: 4,
                                   borderRadius: BorderRadius.circular(10),
-                                  color: Colors.white
-                                ),
-                                 child: Center(
-                                   child: Text(
-                                         '$count',
+                                  child: Container(
+                                    height: 40,
+                                    width: 47,
+                                    decoration: BoxDecoration(
+                                        borderRadius: BorderRadius.circular(10),
+                                        color: Colors.white),
+                                    child: Center(
+                                      child: Text(
+                                        '$count',
                                         style: const TextStyle(fontSize: 20),
-                                     ),
-                                 ),
+                                      ),
+                                    ),
+                                  ),
                                 ),
-                            ),
-                          SizedBox(height: 5,),
-                            Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(15),
-                              child: Container(
-                                height: 32,
-                                width: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                   borderRadius: BorderRadius.circular(15),
+                                SizedBox(
+                                  height: 5,
                                 ),
-                                child: IconButton(
-                               padding: EdgeInsets.zero, 
-                               icon: Icon(Icons.remove, color: gradientgreen3.c),
-                              onPressed: decrementCount,
+                                Material(
+                                  elevation: 4,
+                                  borderRadius: BorderRadius.circular(15),
+                                  child: Container(
+                                    height: 32,
+                                    width: 32,
+                                    decoration: BoxDecoration(
+                                      color: Colors.white,
+                                      borderRadius: BorderRadius.circular(15),
+                                    ),
+                                    child: IconButton(
+                                      padding: EdgeInsets.zero,
+                                      icon: Icon(Icons.remove,
+                                          color: gradientgreen3.c),
+                                      onPressed: decrementCount,
+                                    ),
+                                  ),
+                                ),
+                              ],
                             ),
-                           ),
-                         ),
-                        ],
+                          ],
                         ),
-                       ],
-                        ),
-                              
-                              
+
                         const SizedBox(height: 60),
-                              
+
                         // Book now button
                         Center(
                           child: ElevatedButton(
@@ -539,44 +637,100 @@ class _PetCleaningState extends State<PetCleaning> {
                             },
                             child: const Text(
                               "Book Now",
-                              style: TextStyle(fontSize: 18, color: Colors.white),
+                              style:
+                                  TextStyle(fontSize: 18, color: Colors.white),
                             ),
                           ),
                         ),
-                        
                       ],
                     ),
-                    
                   ),
                 ),
               ],
             ),
-             Positioned(
-            left: 10,
-            top: 40,
-            child: customBackbutton1(
-              onpress: () {
-                Navigator.pop(context);
-              },
+            Positioned(
+              left: 10,
+              top: 40,
+              child: customBackbutton1(
+                onpress: () {
+                  Navigator.pop(context);
+                },
+              ),
             ),
-          ),
-           Positioned(
-                      top: 310,
-                      left: 320,
-                      child: IconButton(
-                       onPressed: () async {
-                         
+            Positioned(
+              top: 310,
+              left: 300,
+              child: IconButton(
+                icon: isAddedToCart
+                    ? const Icon(Icons.check_circle,
+                        color: gradientgreen2.c, size: 30)
+                    : const Icon(Icons.add_shopping_cart_outlined),
+                onPressed: () async {
+                  if (isAddedToCart) return;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text('Added to cart')),
-                        );
-                     },
-                        icon:Icon(Icons.add_shopping_cart_outlined)),
-                    ),
+                  if(!isBookingFormComplete()){
+                    CustomSnackBar.show(
+                        iconcolor: erroriconcolor,
+                        icon: Icons.cancel,
+                        context: context,
+                        message:
+                            " Please fill the booking before adding to cart.",
+                        color: const Color.fromARGB(255, 249, 246, 246));
+                        return;
+                  }
+
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  if (userId == null) return;
+
+                  final cartRef = FirebaseFirestore.instance
+                      .collection('carts')
+                      .doc(userId)
+                      .collection('cartItems');
+
+                  final existing = await cartRef
+                      .where('serviceName', isEqualTo: widget.serviceName)
+                      .where('category', isEqualTo: widget.category)
+                      .where('serviceType', isEqualTo: widget.serviceType)
+                      .get();
+
+                  if (existing.docs.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.white,
+                        content: Text("Item already in cart",
+                            style: TextStyle(color: Colors.black)),
+                      ),
+                    );
+                    setState(() => isAddedToCart = true);
+                    return;
+                  }
+
+                  await CartService.addToCart(
+                    context: context,
+                    serviceName: widget.serviceName,
+                    image: widget.image,
+                    originalPrice: widget.originalPrice,
+                    discountPrice: widget.discountPrice,
+                    discount: widget.discount,
+                    rating: widget.rating,
+                    category: widget.category,
+                    serviceType: widget.serviceType,
+                     selectedDate: null, 
+                     selectedTime: '',
+                      extraDetails: {
+                      'selectedPet': selectedPet,
+                       'count': count,
+                                                    },
+                  );
+
+                  setState(() => isAddedToCart = true);
+                },
+              ),
+            ),
           ],
         ),
       ),
-     floatingActionButton: Container(
+      floatingActionButton: Container(
         width: double.infinity,
         decoration: BoxDecoration(
           color: Colors.black,
@@ -585,9 +739,12 @@ class _PetCleaningState extends State<PetCleaning> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Row(
           children: [
-            Image.asset("assets/icons/dollar.png", scale: 2),
-            SizedBox(width: 10),
-            Text("Price",
+            Text(
+              "₹",
+              style: TextStyle(color: Colors.white, fontSize: 30),
+            ),
+            SizedBox(width: 05),
+            Text("${widget.discountPrice}",
                 style: TextStyle(
                     color: Colors.white,
                     fontSize: 30,
@@ -605,14 +762,57 @@ class _PetCleaningState extends State<PetCleaning> {
                 style: ElevatedButton.styleFrom(
                   backgroundColor: gradientgreen2.c,
                 ),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(SnackBar(
-                    backgroundColor: Colors.white,
-                    content: Text(
-                      "Selected: ",
-                      style: TextStyle(color: Colors.black),
-                    ),
-                  ));
+                onPressed: () async {
+                  final user = FirebaseAuth.instance.currentUser;
+                  if (user == null) return;
+
+                  if (widget.serviceName == null ||
+                      widget.category == null ||
+                      widget.serviceType == null ||
+                      widget.discountPrice == null) {
+                    return;
+                  }
+
+                  try {
+                    final bookingData = {
+                      'userId': user.uid,
+                      'serviceId': widget.serviceId ?? '',
+                      'serviceTitle': widget.serviceName ?? '',
+                      'image': widget.image ?? '',
+                      'originalPrice': widget.originalPrice ?? '',
+                      'discountPrice': widget.discountPrice ?? '',
+                      'discount': widget.discount ?? '',
+                      'rating': widget.rating ?? 0,
+                      'category': widget.category ?? '',
+                      'serviceType': widget.serviceType ?? '',
+                      'selectedDate': selectedDate,
+                      'selectedTime': formattedTime,
+                      'bookingType': 'Interior',
+                      'status': 'booked',
+                      'createdAt': FieldValue.serverTimestamp(),
+                    };
+
+                    await FirebaseFirestore.instance
+                        .collection('bookings')
+                        .add(bookingData);
+
+                    if (!mounted) return;
+                    CustomSnackBar.show(
+                        useTick: true,
+                        context: context,
+                        message:
+                            "Booking request for ${widget.serviceName} submitted.",
+                        color: Colors.white);
+                  } catch (e) {
+                    print("Direct Booking error: $e");
+                    if (!mounted) return;
+                    CustomSnackBar.show(
+                        icon: Icons.cancel,
+                        iconcolor: erroriconcolor,
+                        context: context,
+                        message: "Failed to book ${widget.serviceName}.",
+                        color: Colors.white);
+                  }
                 },
                 child: Text("Book Now",
                     style: TextStyle(
@@ -628,5 +828,3 @@ class _PetCleaningState extends State<PetCleaning> {
     );
   }
 }
-
-

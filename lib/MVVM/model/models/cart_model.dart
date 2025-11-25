@@ -11,7 +11,7 @@ class CartModel {
   final int rating;
   final String category;
   final String service_type;
-  final Timestamp addedAt; // Changed to Timestamp
+  final Timestamp addedAt;
 
   CartModel({
     required this.service_id,

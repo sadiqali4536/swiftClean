@@ -1,10 +1,14 @@
-
-
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
+    as CartService;
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class Dropdown2 extends StatelessWidget {
   final List<String> items;
@@ -30,9 +34,11 @@ class Dropdown2 extends StatelessWidget {
         hint: Text(hint),
         onChanged: onChanged,
         decoration: InputDecoration(
-          contentPadding: const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
-          border: OutlineInputBorder(borderSide: BorderSide.none,
-            borderRadius: BorderRadius.circular(10)),
+          contentPadding:
+              const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+          border: OutlineInputBorder(
+              borderSide: BorderSide.none,
+              borderRadius: BorderRadius.circular(10)),
           filled: true,
           fillColor: Colors.white,
         ),
@@ -45,8 +51,27 @@ class Dropdown2 extends StatelessWidget {
 }
 
 class VehicleBookingPage extends StatefulWidget {
-   final String ?serviceId;
-  const VehicleBookingPage({super.key, this.serviceId});
+  final String? serviceId;
+  String? serviceName;
+  String? image;
+  String? originalPrice;
+  String? discountPrice;
+  String? discount;
+  int? rating;
+  String? category;
+  String? serviceType;
+  VehicleBookingPage({
+    this.category,
+    this.serviceId,
+    this.serviceName,
+    this.image,
+    this.originalPrice,
+    this.discount,
+    this.discountPrice,
+    this.rating,
+    this.serviceType,
+    super.key,
+  });
 
   @override
   State<VehicleBookingPage> createState() => _VehicleBookingPageState();
@@ -58,10 +83,73 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
   int hour = 10;
   int minute = 30;
   String meridiem = 'AM';
+  String selectedcleaning = 'Non';
 
   String? selectedVehicle;
   String? selectedCategory;
   String? selectedCleaningType;
+
+  bool isAddedToCart = false;
+
+  @override
+  void initState() {
+    super.initState();
+    checkIfServiceInCart();
+  }
+
+  bool isBookingFormComplete() {
+    if (widget.serviceName == null ||
+        widget.category == null ||
+        widget.serviceType == null ||
+        widget.discountPrice == null ||
+        vehicleCategories == null ||
+        selectedcleaning == null ||
+        selectedcleaning == 'Non' ||
+        hour < 1 ||
+        hour > 12 ||
+        minute < 0 ||
+        minute > 59 ||
+        meridiem.isEmpty) {
+      return false;
+    }
+
+    // Check if selected datetime is in the future
+    int convertedHour = hour;
+    if (meridiem == 'PM' && hour != 12) convertedHour += 12;
+    if (meridiem == 'AM' && hour == 12) convertedHour = 0;
+
+    DateTime selectedDateTime = DateTime(
+      selectedDate.year,
+      selectedDate.month,
+      selectedDate.day,
+      convertedHour,
+      minute,
+    );
+
+    return selectedDateTime.isAfter(DateTime.now());
+  }
+
+  Future<void> checkIfServiceInCart() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final cartRef = FirebaseFirestore.instance
+        .collection('carts')
+        .doc(userId)
+        .collection('cartItems');
+
+    final existing = await cartRef
+        .where('serviceName', isEqualTo: widget.serviceName)
+        .where('category', isEqualTo: widget.category)
+        .where('serviceType', isEqualTo: widget.serviceType)
+        .get();
+
+    if (mounted) {
+      setState(() {
+        isAddedToCart = existing.docs.isNotEmpty;
+      });
+    }
+  }
 
   final Map<String, List<String>> vehicleCategories = {
     'Car': ['Hatchback', 'Sedan', 'SUV'],
@@ -144,12 +232,12 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                       const Padding(
                         padding: EdgeInsets.only(left: 10),
                         child: Text(
-                          "Select Custom Vehicle Cleaning",
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500),
+                          "Custom Vehicle Cleaning",
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w500),
                         ),
                       ),
-                       const SizedBox(height: 15),
-
+                      const SizedBox(height: 15),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         padding: const EdgeInsets.symmetric(horizontal: 10),
@@ -161,13 +249,16 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                             _cleaningTypeButton("Glass Cleaning"),
                             _cleaningTypeButton("Upholstery Cleaning"),
                             _cleaningTypeButton("Wheel and Tire Cleaning"),
-                          ].expand((w) => [w, const SizedBox(width: 5)]).toList(),
+                          ]
+                              .expand((w) => [w, const SizedBox(width: 5)])
+                              .toList(),
                         ),
                       ),
                       const Padding(
                         padding: EdgeInsets.all(10),
                         child: Text("Select Date",
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w500)),
                       ),
                       SizedBox(
                         height: 100,
@@ -189,10 +280,11 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                               },
                               child: Container(
                                 margin: const EdgeInsets.only(right: 10),
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                padding: const EdgeInsets.symmetric(
+                                    horizontal: 18, vertical: 14),
                                 decoration: BoxDecoration(
                                   color: isSelected
-                                      ? gradientgreen1.c
+                                      ? gradientgreen2.c
                                       : const Color.fromRGBO(229, 229, 229, 1),
                                   borderRadius: BorderRadius.circular(30),
                                 ),
@@ -202,17 +294,23 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                                     Text(DateFormat.E().format(date),
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black)),
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black)),
                                     const SizedBox(height: 5),
                                     Text('${date.day}',
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black)),
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black)),
                                     const SizedBox(height: 5),
                                     Text(monthName,
                                         style: TextStyle(
                                             fontWeight: FontWeight.bold,
-                                            color: isSelected ? Colors.white : Colors.black)),
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black)),
                                   ],
                                 ),
                               ),
@@ -258,9 +356,12 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                       const Padding(
                         padding: EdgeInsets.symmetric(horizontal: 10),
                         child: Text("Select Time",
-                            style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                            style: TextStyle(
+                                fontSize: 20, fontWeight: FontWeight.w500)),
                       ),
-                      SizedBox(height: 10,),
+                      SizedBox(
+                        height: 10,
+                      ),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
@@ -296,19 +397,75 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
                 onpress: () => Navigator.pop(context),
               ),
             ),
+            Positioned(
+              top: 320,
+              left: 300,
+              child: IconButton(
+                icon: isAddedToCart
+                    ? const Icon(Icons.check_circle,
+                        color: gradientgreen2.c, size: 30)
+                    : const Icon(Icons.add_shopping_cart_outlined),
+                onPressed: () async {
+                  if (isAddedToCart) return;
 
-              Positioned(
-                      top: 320,
-                      left: 320,
-                      child: IconButton(
-                       onPressed: () async {
-                        
-                          ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text('Added to cart')),
-                        );
-                     },
-                        icon:Icon(Icons.add_shopping_cart_outlined)),
-                    ),
+                  if(!isBookingFormComplete()){
+                    CustomSnackBar.show(
+                        iconcolor: erroriconcolor,
+                        icon: Icons.cancel,
+                        context: context,
+                        message:
+                            " Please fill the booking before adding to cart.",
+                        color: const Color.fromARGB(255, 249, 246, 246));
+                    return;
+                  }
+
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  if (userId == null) return;
+
+                  final cartRef = FirebaseFirestore.instance
+                      .collection('carts')
+                      .doc(userId)
+                      .collection('cartItems');
+
+                  final existing = await cartRef
+                      .where('serviceName', isEqualTo: widget.serviceName)
+                      .where('category', isEqualTo: widget.category)
+                      .where('serviceType', isEqualTo: widget.serviceType)
+                      .get();
+
+                  if (existing.docs.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.white,
+                        content: Text("Item already in cart",
+                            style: TextStyle(color: Colors.black)),
+                      ),
+                    );
+                    setState(() => isAddedToCart = true);
+                    return;
+                  }
+
+                  final formattedTime =
+                      '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $meridiem';
+
+                  await CartService.addToCart(
+                    context: context,
+                    serviceName: widget.serviceName,
+                    image: widget.image,
+                    originalPrice: widget.originalPrice,
+                    discountPrice: widget.discountPrice,
+                    discount: widget.discount,
+                    rating: widget.rating,
+                    category: widget.category,
+                    serviceType: widget.serviceType,
+                    selectedDate: selectedDate,
+                    selectedTime: formattedTime,
+                  );
+
+                  setState(() => isAddedToCart = true);
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -321,49 +478,114 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
         padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 20),
         child: Row(
           children: [
-            Image.asset("assets/icons/dollar.png", scale: 2),
-            const SizedBox(width: 10),
-            const Text("Price", style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
-            const Text("/Day", style: TextStyle(color: Colors.grey, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text(
+              "₹",
+              style: TextStyle(color: Colors.white, fontSize: 30),
+            ),
+            const SizedBox(width: 05),
+            Text("${widget.discountPrice}",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold)),
+            const Text("/Day",
+                style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
             const Spacer(),
             SizedBox(
-              height: 57,
-              width: 160,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: gradientgreen2.c),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: Colors.white,
-                      content: Text(
-                        "Selected: ${selectedCleaningTypes.join(',')}|$selectedCategory|$selectedDate",
-                        style: const TextStyle(color: Colors.black),
-                      ),
+                height: 57,
+                width: 160,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                      backgroundColor: gradientgreen2.c),
+                  onPressed: () async {
+                    final user = FirebaseAuth.instance.currentUser;
+                    if (user == null) return;
+
+                    final formattedTime =
+                        '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $meridiem';
+
+                    if (widget.serviceName == null ||
+                        widget.category == null ||
+                        widget.serviceType == null ||
+                        widget.discountPrice == null) {
+                      return;
+                    }
+                    try {
+                      final bookingData = {
+                        'userId': user.uid,
+                        'serviceId': widget.serviceId ?? '',
+                        'serviceTitle': widget.serviceName ?? '',
+                        'image': widget.image ?? '',
+                        'originalPrice': widget.originalPrice ?? '',
+                        'discountPrice': widget.discountPrice ?? '',
+                        'discount': widget.discount ?? '',
+                        'rating': widget.rating ?? 0,
+                        'category': widget.category ?? '',
+                        'serviceType': widget.serviceType ?? '',
+                        'vehicleType': selectedVehicle ?? '',
+                        'vehicleCategory': selectedCategory ?? '',
+                        'cleaningTypes': selectedCleaningTypes.toList(),
+                        'selectedDate': selectedDate,
+                        'selectedTime': formattedTime,
+                        'bookingType': 'Vehicle',
+                        'status': 'booked',
+                        'createdAt': FieldValue.serverTimestamp(),
+                      };
+
+                      await FirebaseFirestore.instance
+                          .collection('bookings')
+                          .add(bookingData);
+
+                      if (!mounted) return;
+                      CustomSnackBar.show(
+                          useTick: true,
+                          context: context,
+                          message:
+                              "Booking request for ${widget.serviceName} submitted.",
+                          color: Colors.white);
+                    } catch (e) {
+                      print("Direct Booking error: $e");
+                      if (!mounted) return;
+                      CustomSnackBar.show(
+                          icon: Icons.cancel,
+                          iconcolor: erroriconcolor,
+                          context: context,
+                          message: "Failed to book ${widget.serviceName}.",
+                          color: Colors.white);
+                    }
+                  },
+                  child: const Text(
+                    "Book Now",
+                    style: TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 14,
+                      color: Colors.white,
                     ),
-                  );
-                },
-                child: const Text("Book Now",
-                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 14, color: Colors.white)),
-              ),
-            ),
+                  ),
+                )),
           ],
         ),
       ),
       floatingActionButtonLocation: FloatingActionButtonLocation.centerDocked,
     );
   }
- Set<String> selectedCleaningTypes = {};
+
+  Set<String> selectedCleaningTypes = {};
   Widget _cleaningTypeButton(String label) {
     final bool isSelected = selectedCleaningTypes.contains(label);
     return TextButton(
       style: TextButton.styleFrom(
-        backgroundColor: isSelected ? gradientgreen2.c : const Color(0xFFE7E7E7),
+        backgroundColor:
+            isSelected ? gradientgreen2.c : const Color(0xFFE7E7E7),
         foregroundColor: isSelected ? Colors.white : Colors.black,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(50)),
       ),
       onPressed: () {
         setState(() {
-          if(isSelected){
+          if (isSelected) {
             selectedCleaningTypes.remove(label);
           } else {
             selectedCleaningTypes.add(label);
@@ -399,7 +621,9 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              boxShadow: [BoxShadow(color: Colors.grey.shade300, blurRadius: 4)],
+              boxShadow: [
+                BoxShadow(color: Colors.grey.shade300, blurRadius: 4)
+              ],
             ),
             child: Text(value, style: const TextStyle(fontSize: 18)),
           ),
@@ -422,7 +646,8 @@ class _VehicleBookingPageState extends State<VehicleBookingPage> {
     final bool isSelected = meridiem == value;
     return TextButton(
       style: TextButton.styleFrom(
-        backgroundColor: isSelected ? gradientgreen2.c : const Color(0xFFE7E7E7),
+        backgroundColor:
+            isSelected ? gradientgreen2.c : const Color(0xFFE7E7E7),
         foregroundColor: isSelected ? Colors.white : Colors.black,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
         minimumSize: const Size(52, 42),

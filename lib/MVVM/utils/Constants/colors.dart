@@ -38,3 +38,6 @@ class CustColor{
   static const Color formfielborder=Color.fromRGBO(191, 191, 192, 1);
 
 }
+
+
+var erroriconcolor = const Color.fromARGB(255, 217, 19, 19);

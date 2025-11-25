@@ -269,7 +269,7 @@ class _EditProfileState extends State<EditProfile> {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color.fromRGBO(196, 198, 200, 1)),
+                  color: Color.fromRGBO(126, 126, 126, 1)),
             ),
           ),
           Padding(
@@ -288,7 +288,7 @@ class _EditProfileState extends State<EditProfile> {
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color.fromRGBO(255, 156, 156, 156)),
+                  color: Color.fromRGBO(126, 126, 126, 1)),
             ),
           ),
           Padding(
@@ -301,17 +301,17 @@ class _EditProfileState extends State<EditProfile> {
                     TextStyle(color: const Color.fromARGB(255, 156, 156, 156))),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 455, left: 25),
+            padding: const EdgeInsets.only(top: 355, left: 25),
             child: Text(
               "Phone",
               style: TextStyle(
                   fontSize: 16,
                   fontWeight: FontWeight.bold,
-                  color: Color.fromRGBO(196, 198, 200, 1)),
+                  color: Color.fromRGBO(126, 126, 126, 1)),
             ),
           ),
           Padding(
-            padding: const EdgeInsets.only(top: 480, left: 30),
+            padding: const EdgeInsets.only(top: 380, left: 30),
             child: Customformfield(
                 color: Colors.white,
                 hinttext: "Enter your phone number",

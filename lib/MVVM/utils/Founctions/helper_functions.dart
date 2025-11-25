@@ -53,5 +53,5 @@ Future<String?> getRole(String? uid) async {
     return workerDoc['role'];
   }
 
-  return null; // No role found
+  return null; 
 }

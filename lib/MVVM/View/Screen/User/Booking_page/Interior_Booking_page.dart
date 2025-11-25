@@ -1,12 +1,39 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/Booking_page/booking_confirm.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart';
+import 'package:swiftclean_project/MVVM/View/Screen/User/cart/cart_service.dart'
+    as CartService;
 import 'package:swiftclean_project/MVVM/model/models/cart_model.dart';
 import 'package:swiftclean_project/MVVM/utils/Constants/colors.dart';
 import 'package:swiftclean_project/MVVM/utils/widget/backbutton/custombackbutton.dart';
+import 'package:swiftclean_project/MVVM/utils/widget/custom_message_dialog/customsnakbar.dart';
 
 class InteriorBookingPage extends StatefulWidget {
-   final String ?serviceId;
-  const InteriorBookingPage({super.key, this.serviceId});
+  final String? serviceId;
+  String? serviceName;
+  String? image;
+  String? originalPrice;
+  String? discountPrice;
+  String? discount;
+  int? rating;
+  String? category;
+  String? serviceType;
+
+  InteriorBookingPage({
+    super.key,
+    this.serviceId,
+    this.category,
+    this.discount,
+    this.discountPrice,
+    this.image,
+    this.originalPrice,
+    this.rating,
+    this.serviceName,
+    this.serviceType,
+  });
 
   @override
   State<InteriorBookingPage> createState() => _InteriorBookingPageState();
@@ -15,12 +42,97 @@ class InteriorBookingPage extends StatefulWidget {
 class _InteriorBookingPageState extends State<InteriorBookingPage> {
   DateTime selectedDate = DateTime.now();
   int selectedIndex = 0;
-  int hour = DateTime.now().hour %12;
+  double realPrice = 0.0;
+  int hour = DateTime.now().hour % 12;
   int minute = DateTime.now().minute;
   String meridiem = 'AM';
-  String selectedRoom = 'Living Room';
+  String selectedRoom = 'No Room';
   int count = 1;
   DateTime? _selectedDate;
+  bool isAddedToCart = false;
+
+  @override
+  void initState() {
+    super.initState();
+    checkIfServiceInCart();
+    fetchServicePrice();
+  }
+
+ bool isBookingFormComplete() {
+  if (widget.serviceName == null ||
+      widget.category == null ||
+      widget.serviceType == null ||
+      widget.discountPrice == null ||
+      selectedRoom == 'No Room' || 
+      count <= 0 ||
+      hour < 1 ||
+      hour > 12 ||
+      minute < 0 ||
+      minute > 59 ||
+      meridiem.isEmpty) {
+    return false;
+  }
+
+  int convertedHour = hour;
+  if (meridiem == 'PM' && hour != 12) convertedHour += 12;
+  if (meridiem == 'AM' && hour == 12) convertedHour = 0;
+
+  DateTime selectedDateTime = DateTime(
+    selectedDate.year,
+    selectedDate.month,
+    selectedDate.day,
+    convertedHour,
+    minute,
+  );
+
+  return selectedDateTime.isAfter(DateTime.now());
+}
+
+
+
+  Future<void> checkIfServiceInCart() async {
+    final userId = FirebaseAuth.instance.currentUser?.uid;
+    if (userId == null) return;
+
+    final cartRef = FirebaseFirestore.instance
+        .collection('carts')
+        .doc(userId)
+        .collection('cartItems');
+
+    final existing = await cartRef
+        .where('serviceName', isEqualTo: widget.serviceName)
+        .where('category', isEqualTo: widget.category)
+        .where('serviceType', isEqualTo: widget.serviceType)
+        .get();
+
+    if (!mounted) {
+      setState(() {
+        isAddedToCart = existing.docs.isNotEmpty;
+      });
+    }
+  }
+
+  Future<void> fetchServicePrice() async {
+    try {
+      final snapshot = await FirebaseFirestore.instance
+          .collection('services')
+          .where('service_name', isEqualTo: widget.serviceName)
+          .limit(1)
+          .get();
+
+      if (snapshot.docs.isNotEmpty) {
+        final data = snapshot.docs.first.data();
+        final price = double.tryParse(data['price'].toString());
+        if (price != null) {
+          setState(() {
+            realPrice = price;
+          });
+        }
+      }
+    } catch (e) {
+      debugPrint('Error fetching price: $e');
+    }
+  }
 
   List<DateTime> getWeekDates() {
     final today = DateTime.now();
@@ -29,8 +141,18 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
 
   String _getMonthName(int month) {
     const monthNames = [
-      'January', 'February', 'March', 'April', 'May', 'June',
-      'July', 'August', 'September', 'October', 'November', 'December'
+      'January',
+      'February',
+      'March',
+      'April',
+      'May',
+      'June',
+      'July',
+      'August',
+      'September',
+      'October',
+      'November',
+      'December'
     ];
     return monthNames[month - 1];
   }
@@ -130,6 +252,67 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
     return '${hour.toString().padLeft(2, '0')}:${minute.toString().padLeft(2, '0')} $meridiem';
   }
 
+  Future<void> bookNow() async {
+  final user = FirebaseAuth.instance.currentUser;
+  if (user == null) return;
+
+  if (!isBookingFormComplete()) {
+    CustomSnackBar.show(
+      icon: Icons.cancel,
+      iconcolor: Colors.red,
+      context: context,
+      message: "Please fill all fields correctly before booking.",
+      color: Colors.white,
+    );
+    return;
+  }
+
+  try {
+    final bookingData = {
+      'userId': user.uid,
+      'service_id': widget.serviceId ?? '',
+      'service_name': widget.serviceName ?? '',
+      'image': widget.image ?? '',
+      'original_price': widget.originalPrice ?? '',
+      'price': widget.discountPrice ?? '',
+      'discount': widget.discount ?? '',
+      'rating': widget.rating ?? 0,
+      'category': widget.category ?? '',
+      'service_type': widget.serviceType ?? '',
+      'room_name': selectedRoom,
+      'scheduledDate': DateFormat('yyyy-MM-dd').format(selectedDate),
+      'scheduledTime': formattedTime,
+      'squareFeet': count.toString(),
+      'bookingType': 'Interior',
+      'status': 'booked',
+      'createdAt': FieldValue.serverTimestamp(),
+    };
+
+    await FirebaseFirestore.instance
+        .collection('bookings')
+        .add(bookingData);
+
+    if (!mounted) return;
+
+    CustomSnackBar.show(
+      useTick: true,
+      context: context,
+      message: "Booking request for ${widget.serviceName ?? ''} submitted successfully.",
+      color: Colors.white,
+    );
+  } catch (e) {
+    if (!mounted) return;
+    CustomSnackBar.show(
+      icon: Icons.error,
+      iconcolor: Colors.red,
+      context: context,
+      message: "Failed to book. Please try again.",
+      color: Colors.white,
+    );
+  }
+}
+
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -142,25 +325,29 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                 SizedBox(
                   height: 280,
                   width: double.infinity,
-                  child: Image.asset("assets/image/interior_room.png", fit: BoxFit.cover),
+                  child: Image.asset("assets/image/interior_room.png",
+                      fit: BoxFit.cover),
                 ),
                 Container(
                   width: double.infinity,
                   padding: EdgeInsets.all(20),
                   decoration: BoxDecoration(
                     color: Color(0xFFF9F9F9),
-                    borderRadius: BorderRadius.vertical(top: Radius.circular(30)),
+                    borderRadius:
+                        BorderRadius.vertical(top: Radius.circular(30)),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       Text("Select Room",
-                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w600)),
+                          style: TextStyle(
+                              fontSize: 22, fontWeight: FontWeight.w600)),
                       SizedBox(height: 15),
                       SingleChildScrollView(
                         scrollDirection: Axis.horizontal,
                         child: Row(
                           children: [
+                            _buildRoomButton("No Room"),
                             _buildRoomButton("Living Room"),
                             _buildRoomButton("Bedroom"),
                             _buildRoomButton("Dining Room"),
@@ -175,8 +362,8 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
                         children: [
                           Text("Select Date",
-                              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
-                         
+                              style: TextStyle(
+                                  fontSize: 20, fontWeight: FontWeight.w500)),
                         ],
                       ),
                       SizedBox(
@@ -196,9 +383,12 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                               },
                               child: Container(
                                 margin: EdgeInsets.only(right: 10),
-                                padding: EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                padding: EdgeInsets.symmetric(
+                                    horizontal: 18, vertical: 14),
                                 decoration: BoxDecoration(
-                                  color: isSelected ? gradientgreen2.c : Color(0xFFE5E5E5),
+                                  color: isSelected
+                                      ? gradientgreen2.c
+                                      : Color(0xFFE5E5E5),
                                   borderRadius: BorderRadius.circular(30),
                                 ),
                                 child: Column(
@@ -206,17 +396,23 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                                   children: [
                                     Text(DateFormat.E().format(date),
                                         style: TextStyle(
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                             fontWeight: FontWeight.bold)),
                                     SizedBox(height: 5),
                                     Text('${date.day}',
                                         style: TextStyle(
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                             fontWeight: FontWeight.bold)),
                                     SizedBox(height: 5),
                                     Text(_getMonthName(date.month),
                                         style: TextStyle(
-                                            color: isSelected ? Colors.white : Colors.black,
+                                            color: isSelected
+                                                ? Colors.white
+                                                : Colors.black,
                                             fontWeight: FontWeight.bold)),
                                   ],
                                 ),
@@ -227,16 +423,19 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                       ),
                       SizedBox(height: 25),
                       Text("Select Time",
-                          style: TextStyle(fontSize: 20, fontWeight: FontWeight.w500)),
+                          style: TextStyle(
+                              fontSize: 20, fontWeight: FontWeight.w500)),
                       SizedBox(height: 10),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.center,
                         children: [
-                          _buildTimeColumn("Hour", hour, incrementHour, decrementHour),
+                          _buildTimeColumn(
+                              "Hour", hour, incrementHour, decrementHour),
                           SizedBox(width: 15),
                           Text(":", style: TextStyle(fontSize: 24)),
                           SizedBox(width: 15),
-                          _buildTimeColumn("Min", minute, incrementMinute, decrementMinute),
+                          _buildTimeColumn(
+                              "Min", minute, incrementMinute, decrementMinute),
                           SizedBox(width: 20),
                           Column(
                             children: [
@@ -246,67 +445,66 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
                             ],
                           ),
                           SizedBox(width: 20),
-                          
                           Column(
-                          children: [
-                            Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(15),
-                              child: Container(
-                               height: 32,
-                               width: 32,
-                               decoration: BoxDecoration(
+                            children: [
+                              Material(
+                                elevation: 4,
                                 borderRadius: BorderRadius.circular(15),
-                                color: Colors.white
-                               ),
-                              child: IconButton(
-                               padding: EdgeInsets.zero, 
-                               icon: Icon(Icons.add, color: gradientgreen3.c),
-                               onPressed: incrementCount,
-                               ),
-                                                         ),
-                            ),
-                           SizedBox(height: 5,),
-                            Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(10),
-                              child: Container(
-                                height: 40,
-                                width: 47,
-                                decoration: BoxDecoration(
-                                  borderRadius: BorderRadius.circular(10),
-                                  color: Colors.white
+                                child: Container(
+                                  height: 32,
+                                  width: 32,
+                                  decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(15),
+                                      color: Colors.white),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    icon: Icon(Icons.add,
+                                        color: gradientgreen3.c),
+                                    onPressed: incrementCount,
+                                  ),
                                 ),
-                                 child: Center(
-                                   child: Text(
-                                         '$count',
-                                        style: const TextStyle(fontSize: 20),
-                                     ),
-                                 ),
+                              ),
+                              SizedBox(height: 5),
+                              Material(
+                                elevation: 4,
+                                borderRadius: BorderRadius.circular(10),
+                                child: Container(
+                                  height: 40,
+                                  width: 47,
+                                  decoration: BoxDecoration(
+                                      borderRadius: BorderRadius.circular(10),
+                                      color: Colors.white),
+                                  child: Center(
+                                    child: Text(
+                                      '$count',
+                                      style: const TextStyle(fontSize: 20),
+                                    ),
+                                  ),
                                 ),
-                            ),
-                          SizedBox(height: 5,),
-                            Material(
-                              elevation: 4,
-                              borderRadius: BorderRadius.circular(15),
-                              child: Container(
-                                height: 32,
-                                width: 32,
-                                decoration: BoxDecoration(
-                                  color: Colors.white,
-                                   borderRadius: BorderRadius.circular(15),
+                              ),
+                              SizedBox(height: 5),
+                              Material(
+                                elevation: 4,
+                                borderRadius: BorderRadius.circular(15),
+                                child: Container(
+                                  height: 32,
+                                  width: 32,
+                                  decoration: BoxDecoration(
+                                    color: Colors.white,
+                                    borderRadius: BorderRadius.circular(15),
+                                  ),
+                                  child: IconButton(
+                                    padding: EdgeInsets.zero,
+                                    icon: Icon(Icons.remove,
+                                        color: gradientgreen3.c),
+                                    onPressed: decrementCount,
+                                  ),
                                 ),
-                                child: IconButton(
-                               padding: EdgeInsets.zero, 
-                               icon: Icon(Icons.remove, color: gradientgreen3.c),
-                              onPressed: decrementCount,
-                                                         ),
-                                                       ),
-                            ),
+                              ),
+                            ],
+                          ),
                         ],
-                        ),
-                       ],
-                        ),
+                      ),
                       SizedBox(height: 110),
                     ],
                   ),
@@ -314,32 +512,83 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
               ],
             ),
             Positioned(
-            left: 10,
-            top: 40,
-            child: customBackbutton1(
-              onpress: () {
-                Navigator.pop(context);
-              },
+              left: 10,
+              top: 40,
+              child: customBackbutton1(
+                onpress: () {
+                  Navigator.pop(context);
+                },
+              ),
             ),
-          ),
-          Positioned(
-            top: 600,
-            left: 290,
-            child: Text("Roms",style: TextStyle(fontWeight: FontWeight.bold),
-            )),
-              Positioned(
-                      top: 290,
-                      left: 320,
-                      child: IconButton(
-                   onPressed: () async {
-                          
+            Positioned(
+              top: 300,
+              left: 300,
+              child: IconButton(
+                icon: isAddedToCart
+                    ? const Icon(Icons.check_circle,
+                        color: gradientgreen2.c, size: 30)
+                    : const Icon(Icons.add_shopping_cart_outlined),
+                onPressed: () async {
+                  if (isAddedToCart) return;
 
-                          ScaffoldMessenger.of(context).showSnackBar(
-                         const SnackBar(content: Text('Added to cart')),
-                        );
-                     },
-                        icon:Icon(Icons.add_shopping_cart_outlined)),
-                    ),
+                  if (!isBookingFormComplete()) {
+                    CustomSnackBar.show(
+                        iconcolor: erroriconcolor,
+                        icon: Icons.cancel,
+                        context: context,
+                        message:
+                            " Please fill the booking before adding to cart.",
+                        color: const Color.fromARGB(255, 249, 246, 246));
+                    return;
+                  }
+
+                  final userId = FirebaseAuth.instance.currentUser?.uid;
+                  if (userId == null) return;
+
+                  final cartRef = FirebaseFirestore.instance
+                      .collection('carts')
+                      .doc(userId)
+                      .collection('cartItems');
+
+                  final existing = await cartRef
+                      .where('serviceName', isEqualTo: widget.serviceName)
+                      .where('category', isEqualTo: widget.category)
+                      .where('serviceType', isEqualTo: widget.serviceType)
+                      .get();
+
+                  if (existing.docs.isNotEmpty) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        backgroundColor: Colors.white,
+                        content: Text("Item already in cart",
+                            style: TextStyle(color: Colors.black)),
+                      ),
+                    );
+                    setState(() => isAddedToCart = true);
+                    return;
+                  }
+
+                  await CartService.addToCart(
+                    context: context,
+                    serviceName: widget.serviceName,
+                    image: widget.image,
+                    originalPrice: widget.originalPrice,
+                    discountPrice: widget.discountPrice,
+                    discount: widget.discount,
+                    rating: widget.rating,
+                    category: widget.category,
+                    serviceType: widget.serviceType,
+                    selectedRoom: selectedRoom,
+                    count: count,
+                    selectedDate: selectedDate,
+                    selectedTime: formattedTime,
+                     gardenSize: null,
+                  );
+
+                  setState(() => isAddedToCart = true);
+                },
+              ),
+            ),
           ],
         ),
       ),
@@ -352,28 +601,31 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
         ),
         child: Row(
           children: [
-            Image.asset("assets/icons/dollar.png", scale: 2),
-            SizedBox(width: 10),
-            Text("Price", style: TextStyle(color: Colors.white, fontSize: 30, fontWeight: FontWeight.bold)),
-            Text("/Day", style: TextStyle(color: Colors.grey, fontSize: 20, fontWeight: FontWeight.bold)),
+            Text("₹", style: TextStyle(color: Colors.white, fontSize: 30)),
+            SizedBox(width: 5),
+            Text("${widget.discountPrice ?? '0'}",
+                style: TextStyle(
+                    color: Colors.white,
+                    fontSize: 30,
+                    fontWeight: FontWeight.bold)),
+            Text("/Day",
+                style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 20,
+                    fontWeight: FontWeight.bold)),
             Spacer(),
             SizedBox(
               height: 57,
               width: 160,
               child: ElevatedButton(
-                style: ElevatedButton.styleFrom(backgroundColor: gradientgreen2.c),
-                onPressed: () {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      backgroundColor: Colors.white,
-                      content: Text(
-                        "Booked $selectedRoom on $formattedDate at $formattedTime for $count Room(s)",
-                        style: TextStyle(color: Colors.black),
-                      ),
-                    ),
-                  );
-                },
-                child: Text("Book Now", style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Colors.white)),
+                style:
+                    ElevatedButton.styleFrom(backgroundColor: gradientgreen2.c),
+                onPressed: bookNow,
+                child: Text("Book Now",
+                    style: TextStyle(
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white)),
               ),
             ),
           ],
@@ -392,7 +644,8 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
         style: TextButton.styleFrom(
           backgroundColor: isSelected ? gradientgreen2.c : Color(0xFFE7E7E7),
           foregroundColor: isSelected ? Colors.white : Colors.black,
-          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          shape:
+              RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
           minimumSize: Size(100, 40),
         ),
         child: Text(room),
@@ -400,13 +653,15 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
     );
   }
 
-  Widget _buildTimeColumn(String label, int value, VoidCallback onAdd, VoidCallback onRemove) {
+  Widget _buildTimeColumn(
+      String label, int value, VoidCallback onAdd, VoidCallback onRemove) {
     return Column(
       children: [
         Material(
           elevation: 6,
           borderRadius: BorderRadius.circular(30),
-          child: IconButton(icon: Icon(Icons.add, color: gradientgreen2.c), onPressed: onAdd),
+          child: IconButton(
+              icon: Icon(Icons.add, color: gradientgreen2.c), onPressed: onAdd),
         ),
         SizedBox(height: 10),
         Material(
@@ -414,33 +669,56 @@ class _InteriorBookingPageState extends State<InteriorBookingPage> {
           borderRadius: BorderRadius.circular(12),
           child: Container(
             padding: EdgeInsets.symmetric(horizontal: 20, vertical: 10),
-            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(12)),
-            child: Text(value.toString().padLeft(2, '0'), style: TextStyle(fontSize: 20)),
+            decoration: BoxDecoration(
+                color: Colors.white, borderRadius: BorderRadius.circular(12)),
+            child: Text(value.toString().padLeft(2, '0'),
+                style: TextStyle(fontSize: 20)),
           ),
         ),
         SizedBox(height: 10),
         Material(
           elevation: 6,
           borderRadius: BorderRadius.circular(30),
-          child: IconButton(icon: Icon(Icons.remove, color: gradientgreen2.c), onPressed: onRemove),
+          child: IconButton(
+              icon: Icon(Icons.remove, color: gradientgreen2.c),
+              onPressed: onRemove),
         ),
       ],
     );
   }
 
-  Widget _buildAMPMButton(String value) {
-    final isSelected = meridiem == value;
-    return TextButton(
-      onPressed: () => toggleMeridiem(value),
+
+Widget _buildAMPMButton(String value) {
+  return _buildSelectableButton(
+    value: value,
+    selectedValue: meridiem,
+    onTap: () => toggleMeridiem(value),
+    width: 60, // smaller width for AM/PM
+  );
+}
+
+
+  Widget _buildSelectableButton({
+  required String value,
+  required String selectedValue,
+  required VoidCallback onTap,
+  double width = 100,
+}) {
+  final isSelected = value == selectedValue;
+
+  return Padding(
+    padding: const EdgeInsets.only(right: 10),
+    child: TextButton(
+      onPressed: onTap,
       style: TextButton.styleFrom(
         backgroundColor: isSelected ? gradientgreen2.c : Color(0xFFE7E7E7),
         foregroundColor: isSelected ? Colors.white : Colors.black,
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
-        minimumSize: Size(60, 44),
+        minimumSize: Size(width, 44),
       ),
-      child: Text(value, style: TextStyle(fontSize: 18)),
-    );
-  }
+      child: Text(value, style: const TextStyle(fontSize: 18)),
+    ),
+  );
 }
 
-
+}
